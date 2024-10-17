@@ -1,3 +1,4 @@
-__pycache__
-*.key
-*.crt
+/out
+**/target/
+/artifacts
+**/Cargo.lock
