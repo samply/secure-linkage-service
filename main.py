@@ -83,7 +83,7 @@ def linkageResult(local_id, remote_id):
 
 
 if __name__ == "__main__":
-    no_tls = os.env("LS_NO_TLS")
+    no_tls = os.getenv("LS_NO_TLS")
     if no_tls is None:
         context = ('server.crt', 'server.key')
         app.run(host='0.0.0.0', port=5000, ssl_context=context, threaded=True, debug=False)
