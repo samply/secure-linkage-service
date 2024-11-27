@@ -7,6 +7,7 @@ from linkserv.linkageserver import LinkageServer
 from Crypto import Random
 import simplejson as json
 import time
+import os
 
 app = Flask(__name__)
 
@@ -76,5 +77,9 @@ def linkageResult(local_id, remote_id):
 
 
 if __name__ == "__main__":
-    context = ('server.crt', 'server.key')
-    app.run(host='0.0.0.0', port=5000, ssl_context=context, threaded=True, debug=False)
+    no_tls = os.env("LS_NO_TLS")
+    if no_tls is None:
+        context = ('server.crt', 'server.key')
+        app.run(host='0.0.0.0', port=5000, ssl_context=context, threaded=True, debug=False)
+    else:
+        app.run(host='0.0.0.0', port=5000, threaded=True, debug=False)
