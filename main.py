@@ -12,15 +12,18 @@ import os
 app = Flask(__name__)
 
 LinServ = LinkageServer()
+# Manually register the sites. First argument is ID, second is a symmetric key, third is the number of trailing zeros for ID validation (more on that at the id generation code)
 LinServ.add_epilinker("tuda", Random.new().read(32), 15)
 LinServ.add_epilinker("dkfz", Random.new().read(32), 13)
 LinServ.add_epilinker("charite", Random.new().read(32), 17)
 timeouttime = 20
 
+# Just a basic health chack
 @app.route('/', methods=['GET'])
 def running():
     return 'Server is running!'
 
+# If the id is registered, send 204 else 403
 @app.route('/testConnection/<string:remote_id>', methods=['GET'])
 def check_connection(remote_id):
     print("Got test request from", remote_id)
@@ -31,17 +34,20 @@ def check_connection(remote_id):
         return make_response('Host not configured', 403)
 
 
+# Generate new ids for the server-site 
 @app.route('/freshIDs/<string:remote_id>', methods=['GET'])
 def get_ids(remote_id):
     count = int(request.args.get('count', 1))
     ids = LinServ.generate_ids(remote_id, count)
     return json.dumps({'linkageIds': ids.tolist()})
 
+# Weird duplicate, please ignore
 @app.route('/testConnection/<string:remote_id>')
 def test_connection(remote_id):
     resp = make_response('Connection correctly established', 200)
     return resp
 
+# This call is asynchrounous for the server; it only sets its results. It is synchrounous for the client. It sets ts results, waits unil both shares are set and then returns the linkage result (i.e. a linkage id)
 @app.route('/linkageResult/<string:local_id>/<string:remote_id>', methods=['POST'])
 def linkageResult(local_id, remote_id):
     length = request.content_length

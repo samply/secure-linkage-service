@@ -29,6 +29,7 @@ class LinkageServer:
         else:
             raise KeyError('Invalid Role')
 
+        # multiple computations can be processed in parallel but only one per server-client pair. Very inefficiently handled here.
         if client_id in self.computations:
             if server_id in self.computations[client_id]:
                 self.computations[client_id][server_id].set_share(data)

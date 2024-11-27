@@ -11,6 +11,7 @@ class AESCipher:
         self.key_length = key_length
         assert len(self.key) == self.key_length
 
+    # Standard aes in counter mode, IV gets prepended. Optional base64 encoding
     def encrypt(self, plain, b64=True):
         assert len(self.key) == self.key_length
         iv = Random.new().read(AES.block_size)
@@ -37,6 +38,8 @@ class SecureEpilinker:
         self.idcounter = idcounter
         self.pad = pad
 
+    # The fresh IDs are coprised of a 0-bit (that is tmatch in the linkageresult), an incrementing counter, and a for each site specific zero padding
+    # This bitstring is then encrypted using AES 
     def generate_id(self, n=1):
         result = np.empty(n,dtype='S64')
         for i in range(0,n):
