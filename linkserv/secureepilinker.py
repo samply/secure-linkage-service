@@ -39,13 +39,13 @@ class SecureEpilinker:
         self.pad = pad
 
     # The fresh IDs are coprised of a 0-bit (that is tmatch in the linkageresult), an incrementing counter, and a for each site specific zero padding
-    # This bitstring is then encrypted using AES 
+    # This bitstring is then encrypted using AES
     def generate_id(self, n=1):
         result = np.empty(n,dtype='S64')
         for i in range(0,n):
             result[i] = self.cipher.encrypt(b'0'+bytes(self.idcounter)+self.pad*b'0')
             self.idcounter += 1
-        if n is 1:
+        if n == 1:
             return result[0]
         else:
             return result
