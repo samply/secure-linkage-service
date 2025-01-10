@@ -2,31 +2,34 @@
 
 ## Requirements
 
-* Python 3.7+
-* python3-venv (built-in into Python since Python 3.3)
-
+* Python 3 (currently tested on Python 3.11; should run on Python 3.7+)
+* pipenv
 
 ## Running the server
 
-### Using `venv`
+### Using `pipenv`
 
 ```shell
-# Create a virtual environment to isolate the project denpendencies
-python3 -m venv ./venv
+# Install the dependencies (automatically creates the virtual environment if needed)
+pipenv install
 
-# Activate it
-source venv/bin/activate
+# Starting the daemon (without setting up TLS)
 
-# Install the dependencies
-pip3 install -r requirements.txt
+## Directly from the normal shell
+LS_NO_TLS=true pipenv run python3 main.py
 
-# Start the daemon (without setting up TLS)
+## From within the virtual environment
+pipenv shell
 LS_NO_TLS=true python3 main.py
 
 ...
 
-# After execution, deactivate the virtual environment
-deactivate
+exit
+
+...
+
+# Remove the virtual environment
+pipenv --rm
 
 ```
 
