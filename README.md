@@ -16,11 +16,11 @@ pipenv install
 # Starting the daemon (without setting up TLS)
 
 ## Directly from the normal shell
-LS_NO_TLS=true pipenv run python3 main.py
+LS_NO_TLS=true pipenv run python3 src/main.py
 
 ## From within the virtual environment
 pipenv shell
-LS_NO_TLS=true python3 main.py
+LS_NO_TLS=true python3 src/main.py
 
 ...
 
