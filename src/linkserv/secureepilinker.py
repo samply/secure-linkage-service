@@ -24,6 +24,8 @@ class AESCipher:
 
     def decrypt(self, enc, b64=True):
         assert len(self.key) == self.key_length
+        # Probably the whole logic of this class is flawed, but
+        # Using base64 is critical.
         if b64:
             enc = base64.b64decode(enc)
         iv_int = int(binascii.hexlify(enc[:16]),16)

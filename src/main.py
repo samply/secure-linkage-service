@@ -13,17 +13,24 @@ app = Flask(__name__)
 
 LinServ = LinkageServer()
 # Manually register the sites. First argument is ID, second is a symmetric key, third is the number of trailing zeros for ID validation (more on that at the id generation code)
+# Each side has a specific number of zeroes. That's how it is identified.
+# There are beter ways to do this.
+
+# The third parameter should be eventually removed, and the ID validation process should be performed within the encryption process.
+
 LinServ.add_epilinker("tuda", Random.new().read(32), 15)
 LinServ.add_epilinker("dkfz", Random.new().read(32), 13)
 LinServ.add_epilinker("charite", Random.new().read(32), 17)
+
+# This is arbitrary
 timeouttime = 20
 
-# Just a basic health chack
+# Just a basic health check
 @app.route('/', methods=['GET'])
 def running():
     return 'Server is running!'
 
-# If the id is registered, send 204 else 403
+# Connectivity check
 @app.route('/testConnection/<string:remote_id>', methods=['GET'])
 def check_connection(remote_id):
     print("Got test request from", remote_id)
@@ -32,9 +39,16 @@ def check_connection(remote_id):
         return make_response('', 204)
     except KeyError as e:
         return make_response('Host not configured', 403)
+    # Look for a better error code.
+    # Maybe 500?
 
 
-# Generate new ids for the server-site 
+# Generate new ids for the server-site
+# We should add error handling
+# What if
+# * the remote ID is not registered?
+# * the count is < 1?
+
 @app.route('/freshIDs/<string:remote_id>', methods=['GET'])
 def get_ids(remote_id):
     count = int(request.args.get('count', 1))
@@ -42,11 +56,15 @@ def get_ids(remote_id):
     return json.dumps({'linkageIds': ids.tolist()})
 
 # Weird duplicate, please ignore
+# We can probably delete this endpoint.
+# (Look it up in the documentation.)
 @app.route('/testConnection/<string:remote_id>')
 def test_connection(remote_id):
     resp = make_response('Connection correctly established', 200)
     return resp
 
+# This is the workflow documented in the diagram, and in section 2.4.2.
+#
 # This call is asynchrounous for the server; it only sets its results. It is synchrounous for the client. It sets ts results, waits unil both shares are set and then returns the linkage result (i.e. a linkage id)
 @app.route('/linkageResult/<string:local_id>/<string:remote_id>', methods=['POST'])
 def linkageResult(local_id, remote_id):
@@ -72,6 +90,8 @@ def linkageResult(local_id, remote_id):
                         return result
                     LinServ.clear_result(local_id, remote_id)
                     return make_response('No result from server', 408)
+                # Check whether 408 is actually correct
+
                 return 'Recieved server result'
             return make_response('Invalid JSON', 400)
         except Exception as e:
@@ -80,6 +100,7 @@ def linkageResult(local_id, remote_id):
             return make_response('Invalid JSON', 400)
     else:
         return make_response('No result sent', 411)
+    # Check whether 411 is correct?
 
 
 if __name__ == "__main__":
