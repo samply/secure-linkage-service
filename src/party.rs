@@ -40,15 +40,17 @@ impl Party {
                 self.secret_key
                     .seal_in_place_append_tag(nonce, aad, &mut payload)
                     .expect("CANNOT ENCRYPT ID");
-                // Postpend the nonce (i.e. aad)
-                payload.extend_from_slice(&nonce_bytes);
-                BASE64_STANDARD.encode(payload)
+                // Prepend the nonce (i.e. aad)
+                let mut combined: Vec<u8> = nonce_bytes.to_vec();
+                combined.extend(&payload);
+                BASE64_STANDARD.encode(&combined)
             })
             .collect()
     }
     pub fn verify_id(&self, id: &str) -> Result<(), ()> {
         let mut decrypted = BASE64_STANDARD.decode(id).expect("CANNOT DECODE ID BASE64");
-        let (payload, nonce_bytes) = decrypted.split_at_mut(24);
+        // Nonce is 12 bytes long
+        let (nonce_bytes, payload) = decrypted.split_at_mut(12);
     let nonce_bytes: [u8; 12] = nonce_bytes.try_into().expect("WHOA THERE PARTNER! THE NONCE HAS A WRONG SIZE!");
         let nonce = Nonce::assume_unique_for_key(nonce_bytes);
         let aad = Aad::from(nonce_bytes);
