@@ -23,6 +23,10 @@ tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "ansi", "json"] }
 tryhard = "0"
+ring = { version = "0.17", features = ["std"] }
+base64 = "0.22"
+rand = "0.8.5"
+hex = "0.4.3"
 
 [build-dependencies]
 build-data = "0"

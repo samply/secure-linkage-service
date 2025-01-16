@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -9,6 +7,7 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::Value;
+use tracing::debug;
 
 use crate::AppState;
 
@@ -57,13 +56,21 @@ async fn idgen_handler(
     count: Option<Query<IDGenParams>>,
 ) -> impl IntoResponse {
     let count = count.unwrap_or_default().count;
-    let ids: Vec<String> = vec![
-        "dfc2fd55-37ff-4f41-b3e3-65f5135134c6".into(),
-        "11e928a5-c065-45d4-90fa-e2a058d9b4f9u".into(),
-        "36912758-d382-4e6f-8f54-dee10507dacd".into(),
-        count.to_string(),
-    ];
-    Json(ids)
+    let mut result: Vec<String> = Vec::with_capacity(count);
+    {
+        let mut parties = state.parties.write().expect("CANNOT WRITE LOCK PARTIES");
+        if let Some(party) = parties.get_mut(remote_id.as_str()) {
+            result = party.generate_ids(count);
+        } else {
+            return (StatusCode::NOT_FOUND, "Remote ID not registered").into_response();
+        };
+    }
+    debug!("Result: {:?}", result);
+    if result.len() == 1 {
+        Json(result.get(0).unwrap()).into_response()
+    } else {
+        Json(result).into_response()
+    }
 }
 
 /// `/version` handler that resturns version and commit info as JSON

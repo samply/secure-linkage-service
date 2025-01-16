@@ -1,8 +1,15 @@
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
+
 use anyhow::Context;
 use tokio::net::TcpListener;
 use tracing::info;
 
-use securelinkageservice::{config::LogFormat, routers::build_main_router, AppState, Config};
+use securelinkageservice::{
+    config::LogFormat, routers::build_main_router, AppState, Config, Party,
+};
 use tracing_subscriber::EnvFilter;
 mod banner;
 
@@ -48,10 +55,23 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context(format!("could not listen to `{}`", config.listen))?;
 
-    info!("starting server on `{}`", config.listen);
-    let router = build_main_router(AppState {
+    let state = AppState {
         config: Box::leak(Box::new(config)),
-    });
+        parties: Arc::new(RwLock::new(HashMap::new())),
+    };
+    {
+        let mut parties = state.parties.write().expect("CANNOT LOCK PARTIES");
+        parties.insert("DKFZ", Party::new("DKFZ"));
+        parties.insert("TUDA", Party::new("TUDA"));
+    }
+    {
+        let parties = state.parties.read().expect("CANNOT LOCK READ PARTIES");
+        info!("created {} parties: {:?}", parties.len(), parties.keys());
+    }
+
+    info!("starting server on `{}`", state.config.listen);
+    let router = build_main_router(state);
+
     axum::serve(listener, router.into_make_service())
         .with_graceful_shutdown(shutdown_signal())
         .await
