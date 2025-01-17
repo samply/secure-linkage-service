@@ -1,6 +1,7 @@
 mod app_state;
 pub mod config;
 pub(crate) mod errors;
+mod linkage_result;
 mod party;
 pub mod routers;
 

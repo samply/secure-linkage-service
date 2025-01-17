@@ -1,7 +1,7 @@
 use base64::prelude::*;
+use rand::Rng;
 use ring::aead::*;
 use ring::rand::{SecureRandom, SystemRandom};
-use rand::Rng;
 
 #[derive(Debug)]
 pub struct Party {
@@ -51,15 +51,20 @@ impl Party {
         let mut decrypted = BASE64_STANDARD.decode(id).expect("CANNOT DECODE ID BASE64");
         // Nonce is 12 bytes long
         let (nonce_bytes, payload) = decrypted.split_at_mut(12);
-    let nonce_bytes: [u8; 12] = nonce_bytes.try_into().expect("WHOA THERE PARTNER! THE NONCE HAS A WRONG SIZE!");
+        let nonce_bytes: [u8; 12] = nonce_bytes
+            .try_into()
+            .expect("WHOA THERE PARTNER! THE NONCE HAS A WRONG SIZE!");
         let nonce = Nonce::assume_unique_for_key(nonce_bytes);
         let aad = Aad::from(nonce_bytes);
-        self.secret_key.open_in_place(nonce, aad , payload).map_err(|_|()).map(|_|())
+        self.secret_key
+            .open_in_place(nonce, aad, payload)
+            .map_err(|_| ())
+            .map(|_| ())
     }
 }
 
 #[tokio::test]
-async fn test_id_generation_specific_count(){
+async fn test_id_generation_specific_count() {
     let mut party = Party::new("Test");
     let count: u16 = rand::thread_rng().gen();
     let result = party.generate_ids(count as usize);
@@ -67,7 +72,7 @@ async fn test_id_generation_specific_count(){
 }
 
 #[tokio::test]
-async fn test_ok_id_verification(){
+async fn test_ok_id_verification() {
     let mut party = Party::new("Test");
     let count: u16 = rand::thread_rng().gen();
     let ids = party.generate_ids(count as usize);
@@ -78,7 +83,7 @@ async fn test_ok_id_verification(){
 }
 
 #[tokio::test]
-async fn test_err_id_verification(){
+async fn test_err_id_verification() {
     let mut party = Party::new("Test");
     let party2 = Party::new("Test2");
     let count: u16 = rand::thread_rng().gen();
