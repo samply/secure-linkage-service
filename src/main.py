@@ -48,7 +48,6 @@ def check_connection(remote_id):
 # What if
 # * the remote ID is not registered?
 # * the count is < 1?
-
 @app.route('/freshIDs/<string:remote_id>', methods=['GET'])
 def get_ids(remote_id):
     count = int(request.args.get('count', 1))
