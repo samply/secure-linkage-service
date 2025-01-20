@@ -21,7 +21,6 @@ source venv/bin/activate
 pip3 install -r requirements.txt
 
 # Start the daemon (without setting up TLS)
-# from within the virtual environment
 LS_NO_TLS=true python3 src/main.py
 
 ...
