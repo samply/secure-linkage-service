@@ -20,6 +20,9 @@ source venv/bin/activate
 # Install the dependencies
 pip3 install -r requirements.txt
 
+# Run the tests
+pytest
+
 # Start the daemon (without setting up TLS)
 LS_NO_TLS=true python3 src/main.py
 
