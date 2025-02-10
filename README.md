@@ -1,4 +1,4 @@
-# securelinkageservice
+# secure-linkage-service
 
 
 ## Requirements
