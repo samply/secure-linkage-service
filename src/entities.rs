@@ -1,20 +1,35 @@
+struct HostId(str);
+struct Key(str);
+struct Padding(str);
+struct LocalId(UId);
+struct RemoteId(UId);
+struct Match(bool);
+struct Index(str);
+struct Counter(u64);
+struct Ready(bool);
+
 struct EpiLinker {
-    uid: str,
-    key: str,
-    padding: str,
-    id_counter: Option<int64>,
+    uid: HostId,
+    key: Key,
+    padding: Padding,
+    id_counter: Option<Counter>,
 }
 
 struct LinkageShare {
-    matches: Vec<bool>,
-    tentative_matches: Vec<bool>,
-    indexes: Optional<Vec<str>>,
+    matches: Vec<Match>,
+    tentative_matches: Vec<Match>,
+    indexes: Optional<Vec<Index>>,
+}
+
+enum HostRole {
+    Client,
+    Server,
 }
 
 struct Computation {
-    local_id: str,
-    remote_id: str,
-    role: str,
+    local_id: HostId,
+    remote_id: HostId,
+    role: HostRole,
     data: Optional<LinkageShare>,
 }
 
@@ -25,6 +40,6 @@ struct LinkageState {
 
 struct LinkageResult {
     state: LinkageState,
-    local_id: str,
-    remote_id: str,
+    local_id: HostId,
+    remote_id: HostId,
 }
