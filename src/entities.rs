@@ -22,3 +22,9 @@ struct LinkageState {
     epilinkers: Vec<EpiLinker>,
     computations: Vec<Computation>,
 }
+
+struct LinkageResult {
+    state: LinkageState,
+    local_id: str,
+    remote_id: str,
+}
