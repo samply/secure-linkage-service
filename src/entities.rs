@@ -1,45 +1,68 @@
-struct HostId(str);
-struct Key(str);
-struct Padding(str);
-struct LocalId(UId);
-struct RemoteId(UId);
-struct Match(bool);
-struct Index(str);
-struct Counter(u64);
-struct Ready(bool);
+use std::rc::Rc;
 
-struct EpiLinker {
-    uid: HostId,
-    key: Key,
-    padding: Padding,
-    id_counter: Option<Counter>,
+// Simple types that are just wrappers
+
+#[derive(Debug, Clone, Copy)]
+pub struct Counter(pub u64);
+
+#[derive(Debug, Clone, Copy)]
+pub struct Ready(pub bool);
+
+#[derive(Debug, Clone, Copy)]
+pub struct Match(pub bool);
+
+// String-containing types using Rc<str>
+#[derive(Debug, Clone)]
+pub struct HostId(pub Rc<str>);
+
+#[derive(Debug, Clone)]
+pub struct Key(pub Rc<str>);
+
+#[derive(Debug, Clone)]
+pub struct Padding(pub Rc<str>);
+
+#[derive(Debug, Clone)]
+pub struct Index(pub Rc<str>);
+
+// Composite types
+#[derive(Debug, Clone)]
+pub struct EpiLinker {
+    pub uid: HostId,
+    pub key: Key,
+    pub padding: Padding,
+    pub id_counter: Option<Counter>,
 }
 
-struct LinkageShare {
-    matches: Vec<Match>,
-    tentative_matches: Vec<Match>,
-    indexes: Optional<Vec<Index>>,
+#[derive(Debug, Clone)]
+pub struct LinkageShare {
+    pub matches: Rc<[Match]>,
+    pub tentative_matches: Rc<[Match]>,
+    pub indexes: Option<Rc<[Index]>>,
 }
 
-enum HostRole {
+#[derive(Debug, Clone, Copy)]
+pub enum HostRole {
     Client,
     Server,
 }
 
-struct Computation {
-    local_id: HostId,
-    remote_id: HostId,
-    role: HostRole,
-    data: Optional<LinkageShare>,
+#[derive(Debug, Clone)]
+pub struct Computation {
+    pub local_id: HostId,
+    pub remote_id: HostId,
+    pub role: HostRole,
+    pub data: Option<LinkageShare>,
 }
 
-struct LinkageState {
-    epilinkers: Vec<EpiLinker>,
-    computations: Vec<Computation>,
+#[derive(Debug, Clone)]
+pub struct LinkageState {
+    pub epilinkers: Rc<[EpiLinker]>,
+    pub computations: Rc<[Computation]>,
 }
 
-struct LinkageResult {
-    state: LinkageState,
-    local_id: HostId,
-    remote_id: HostId,
+#[derive(Debug, Clone)]
+pub struct LinkageResult {
+    pub state: LinkageState,
+    pub local_id: HostId,
+    pub remote_id: HostId,
 }

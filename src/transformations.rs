@@ -1,35 +1,54 @@
-mod entities;
-
+use crate::entities::*;
 use bytes::Bytes;
 use http::Response;
 
 // Linkage
 
-fn process_share_data(data: LinkageShare) -> LinkageShare;
+pub fn process_share_data(data: LinkageShare) -> LinkageShare {
+    todo!()
+}
 
-fn is_result_ready(linkageResult: LinkageResult) -> Ready;
+pub fn is_result_ready(linkage_result: LinkageResult) -> Ready {
+    todo!()
+}
 
-fn compute_linkage_result(linkageResult: LinkageResult) -> LinkageResult;
+pub fn compute_linkage_result(linkage_result: LinkageResult) -> LinkageResult {
+    todo!()
+}
 
-fn create_initial_state() -> LinkageState;
+pub fn create_initial_state() -> LinkageState {
+    todo!()
+}
 
-fn generate_linkage_ids(epilinkers: Vect<EpiLinker>, count: Counter) -> Bytes;
+pub fn generate_linkage_ids(epilinkers: Vec<EpiLinker>, count: Counter) -> Bytes {
+    todo!()
+}
 
-fn update_computation_state(
-    linkageResult: LinkageResult,
-    linkageData: LinkageShare,
-) -> LinkageState;
+pub fn update_computation_state(
+    linkage_result: LinkageResult,
+    linkage_data: LinkageShare,
+) -> LinkageState {
+    todo!()
+}
 
-// Handlers
+// HTTP Handlers
 
-fn homepage() -> Response;
+pub fn homepage() -> Response<Bytes> {
+    todo!()
+}
 
-fn check_connection(remote_id: Hostd) -> Response;
+pub fn check_connection(remote_id: HostId) -> Response<Bytes> {
+    todo!()
+}
 
-fn get_ids(remote_id: HostId) -> Response;
+pub fn get_ids(remote_id: HostId) -> Response<Bytes> {
+    todo!()
+}
 
-fn linkage_result(
-    linkageResult: LinkageResult,
-    linkageData: LinkageShare,
+pub fn linkage_result(
+    linkage_result: LinkageResult,
+    linkage_data: LinkageShare,
     timeout: Counter,
-) -> Response;
+) -> Response<Bytes> {
+    todo!()
+}
