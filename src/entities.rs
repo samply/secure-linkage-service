@@ -29,6 +29,15 @@ impl Match {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Padding(pub Counter);
+
+impl Padding {
+    pub fn new(value: Counter) -> Self {
+        Self(value)
+    }
+}
+
 /// String-containing types using Rc<str>
 
 #[derive(Debug, Clone)]
@@ -44,15 +53,6 @@ impl HostId {
 pub struct Key(pub Rc<str>);
 
 impl Key {
-    pub fn new(value: &str) -> Self {
-        Self(Rc::from(value))
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Padding(pub Rc<str>);
-
-impl Padding {
     pub fn new(value: &str) -> Self {
         Self(Rc::from(value))
     }
