@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-// Simple types that are just wrappers
+/// Simple types (wrappers)
 
 #[derive(Debug, Clone, Copy)]
 pub struct Counter(pub u64);
@@ -11,7 +11,8 @@ pub struct Ready(pub bool);
 #[derive(Debug, Clone, Copy)]
 pub struct Match(pub bool);
 
-// String-containing types using Rc<str>
+/// String-containing types using Rc<str>
+
 #[derive(Debug, Clone)]
 pub struct HostId(pub Rc<str>);
 
@@ -24,7 +25,8 @@ pub struct Padding(pub Rc<str>);
 #[derive(Debug, Clone)]
 pub struct Index(pub Rc<str>);
 
-// Composite types
+/// Composite types
+
 #[derive(Debug, Clone)]
 pub struct EpiLinker {
     pub uid: HostId,
