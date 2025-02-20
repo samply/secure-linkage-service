@@ -8,6 +8,9 @@ use std::rc::Rc;
 pub struct Padding(pub u64);
 
 #[derive(Debug, Clone, Copy)]
+pub struct TimeOut(pub u64);
+
+#[derive(Debug, Clone, Copy)]
 pub struct TentativeMatch(pub bool);
 
 #[derive(Debug, Clone, Copy)]
