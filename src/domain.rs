@@ -4,18 +4,19 @@ use std::rc::Rc;
 
 /// Simple types (wrappers), and their enums
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Padding(pub u64);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TimeOut(pub u64);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TentativeMatch(pub bool);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ConfirmedMatch(pub bool);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MatchBit {
     ConfirmedMatch,
     TentativeMatch,
@@ -28,7 +29,7 @@ pub enum MatchResult {
 
 /// String-containing types using Rc<str>
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HostId(pub Rc<str>);
 
 impl HostId {
@@ -37,7 +38,7 @@ impl HostId {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Key(pub Rc<str>);
 
 impl Key {
@@ -65,7 +66,7 @@ impl Deref for RecordId {
 
 /// Composite types, and their enums
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EpiLinker {
     pub uid: HostId,
     pub key: Key,
@@ -73,7 +74,7 @@ pub struct EpiLinker {
     pub linkage_data: Option<LinkageData>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinkageShare {
     pub matches: Rc<HashMap<RecordId, (TentativeMatch, ConfirmedMatch)>>,
     pub best_match: Option<Rc<RecordId>>,
@@ -96,7 +97,7 @@ impl LinkageShare {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LinkageData {
     ClientLinkageData,
     ServerLinkageData,
@@ -122,7 +123,7 @@ impl ServerLinkageData {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Computation {
     pub client_id: HostId,
     pub server_id: HostId,
@@ -139,7 +140,7 @@ impl Computation {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinkageState {
     pub epilinkers: Rc<[EpiLinker]>,
     pub computations: Rc<[Computation]>,
@@ -154,7 +155,7 @@ impl LinkageState {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinkageResult {
     pub state: LinkageState,
     pub client_id: HostId,
