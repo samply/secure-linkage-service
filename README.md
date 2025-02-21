@@ -2,7 +2,7 @@
 
 ## Requirements
 
-* Rust 1.84.1+
+* Rust 1.85.0+
 
 ## License
 
