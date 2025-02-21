@@ -8,11 +8,6 @@ mod tests {
     #[test]
     fn compute_linkage_should() {
         // Create shared record IDs
-        let client_record_ids = Rc::new([
-            RecordId::new("client-record-1"),
-            RecordId::new("client-record-2"),
-        ]);
-
         let server_record_ids = Rc::new([
             RecordId::new("server-record-1"),
             RecordId::new("server-record-2"),
@@ -23,11 +18,11 @@ mod tests {
         let matches = {
             let mut map = HashMap::new();
             map.insert(
-                client_record_ids[0].clone(),
+                server_record_ids[0].clone(),
                 (TentativeMatch(true), ConfirmedMatch(false)),
             );
             map.insert(
-                client_record_ids[1].clone(),
+                server_record_ids[1].clone(),
                 (TentativeMatch(false), ConfirmedMatch(false)),
             );
             Rc::new(map)

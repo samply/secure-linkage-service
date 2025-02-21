@@ -76,25 +76,9 @@ pub struct EpiLinker {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinkageShare {
-    pub matches: Rc<HashMap<RecordId, (TentativeMatch, ConfirmedMatch)>>,
-    pub best_match: Option<Rc<RecordId>>,
-}
-
-impl LinkageShare {
-    pub fn new(
-        matches: Rc<HashMap<RecordId, (TentativeMatch, ConfirmedMatch)>>,
-        best_match: Option<&RecordId>,
-    ) -> Self {
-        Self {
-            best_match: best_match.map(|id| Rc::new(id.clone())),
-            matches: Rc::from(
-                matches
-                    .iter()
-                    .map(|(id, (tm, cm))| (id.clone(), (*tm, *cm)))
-                    .collect::<HashMap<_, (_, _)>>(),
-            ),
-        }
-    }
+    tmb: TentativeMatchBit,
+    cmd: ConfirmedMatchBit,
+    bmi: BestMatchIndex,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -105,13 +89,13 @@ pub enum LinkageData {
 
 #[derive(Debug, Clone)]
 pub struct ClientLinkageData {
-    pub share: Rc<LinkageShare>,
+    pub share: Rc<Vec<LinkageShare>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ServerLinkageData {
-    pub share: Rc<LinkageShare>,
-    pub ids: Rc<[RecordId]>,
+    pub share: Rc<Vec<LinkageShare>>,
+    pub ids: Rc<Vec<RecordId>>,
 }
 
 impl ServerLinkageData {
@@ -127,8 +111,14 @@ impl ServerLinkageData {
 pub struct Computation {
     pub client_id: HostId,
     pub server_id: HostId,
-    pub data: Option<LinkageShare>,
+    pub client_data: Option<ClientLinkageData>,
+    pub_server_data: Option<ServerLinkageData>,
+
+ // You will update the computation when a new set of data comes in
 }
+
+
+update_computation(computation, server_data, client_data) --> linkage_result
 
 impl Computation {
     pub fn new(client_id: HostId, server_id: HostId, data: Option<LinkageShare>) -> Self {
