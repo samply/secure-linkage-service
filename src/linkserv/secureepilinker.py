@@ -42,18 +42,21 @@ class SecureEpilinker:
         self.idcounter = idcounter
         self.pad = pad
 
-    # The fresh IDs are coprised of a 0-bit (that is tmatch in the linkageresult), an incrementing counter, and a for each site specific zero padding
-    # This bitstring is then encrypted using AES
+    # The fresh IDs are comprised of:
+    # * a 0-bit (tmatch in the linkageresult),
+    # * an incrementing counter, and
+    # * a specific zero padding for each site.
+    #
+    # This bit-string is then encrypted using AES.
     def generate_id(self, n=1):
+        # TODO: Ask Tobias whether
+        # was NumPy used here only for serialization reasons?
         result = np.empty(n, dtype='S64')
         for i in range(0, n):
             result[i] = self.cipher.encrypt(
                 b'0' + bytes(self.idcounter) + self.pad * b'0')
             self.idcounter += 1
-        if n == 1:
-            return result[0]
-        else:
-            return result
+        return result.tolist()
 
     def validate_id(self, lid, base64=True):
         m = self.cipher.decrypt(lid, base64)

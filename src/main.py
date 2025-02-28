@@ -1,4 +1,5 @@
 from flask import Flask
+from flask import jsonify
 from flask import request
 from flask import make_response
 from linkserv.linkageserver import LinkageServer
@@ -55,7 +56,7 @@ def check_connection(remote_id):
 def get_ids(remote_id):
     count = int(request.args.get('count', 1))
     ids = LinServ.generate_ids(remote_id, count)
-    return json.dumps({'linkageIds': ids.tolist()})
+    return jsonify({'linkageIds': ids})
 
 # Weird duplicate, please ignore
 # We can probably delete this endpoint.

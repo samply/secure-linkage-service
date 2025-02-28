@@ -1,5 +1,5 @@
-from linkserv.secureepilinker import SecureEpilinker
 from linkserv.linkresult import LinkageResult
+from linkserv.secureepilinker import SecureEpilinker
 
 
 class LinkageServer:
@@ -13,9 +13,12 @@ class LinkageServer:
             epilinker_id, key, padding)
 
     def generate_ids(self, remote_id, count):
-        if remote_id in self.epilinker:
-            return self.epilinker[remote_id].generate_id(count)
-        raise KeyError('Invalid Remote Id')
+        if remote_id not in self.epilinker:
+            raise KeyError('Invalid Remote Id')
+
+        # Convert bytes to strings for easier JSON serialization
+        return list(map(bytes.decode,
+                        self.epilinker[remote_id].generate_id(count)))
 
     def get_epilinker(self, epilinker_id):
         if epilinker_id in self.epilinker:
