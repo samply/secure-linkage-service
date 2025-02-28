@@ -16,7 +16,8 @@ LinServ = LinkageServer()
 # Each side has a specific number of zeroes. That's how it is identified.
 # There are beter ways to do this.
 
-# The third parameter should be eventually removed, and the ID validation process should be performed within the encryption process.
+# The third parameter should be eventually removed, and the ID validation
+# process should be performed within the encryption process.
 
 LinServ.add_epilinker("tuda", Random.new().read(32), 15)
 LinServ.add_epilinker("dkfz", Random.new().read(32), 13)
@@ -26,11 +27,15 @@ LinServ.add_epilinker("charite", Random.new().read(32), 17)
 timeouttime = 20
 
 # Just a basic health check
+
+
 @app.route('/', methods=['GET'])
 def running():
     return 'Server is running!'
 
 # Connectivity check
+
+
 @app.route('/testConnection/<string:remote_id>', methods=['GET'])
 def check_connection(remote_id):
     print("Got test request from", remote_id)
@@ -57,6 +62,8 @@ def get_ids(remote_id):
 # Weird duplicate, please ignore
 # We can probably delete this endpoint.
 # (Look it up in the documentation.)
+
+
 @app.route('/testConnection/<string:remote_id>')
 def test_connection(remote_id):
     resp = make_response('Connection correctly established', 200)
@@ -64,8 +71,13 @@ def test_connection(remote_id):
 
 # This is the workflow documented in the diagram, and in section 2.4.2.
 #
-# This call is asynchrounous for the server; it only sets its results. It is synchrounous for the client. It sets ts results, waits unil both shares are set and then returns the linkage result (i.e. a linkage id)
-@app.route('/linkageResult/<string:local_id>/<string:remote_id>', methods=['POST'])
+# This call is asynchrounous for the server; it only sets its results. It
+# is synchrounous for the client. It sets ts results, waits unil both
+# shares are set and then returns the linkage result (i.e. a linkage id)
+
+
+@app.route('/linkageResult/<string:local_id>/<string:remote_id>',
+           methods=['POST'])
 def linkageResult(local_id, remote_id):
     length = request.content_length
     if length != 0:
@@ -85,7 +97,8 @@ def linkageResult(local_id, remote_id):
                             timeout = True
                             break
                     if not timeout:
-                        result = LinServ.get_linkage_result(local_id, remote_id)
+                        result = LinServ.get_linkage_result(
+                            local_id, remote_id)
                         # TODO: confirm with Tobias
                         # it's actually OK to also clear the result here.
                         LinServ.clear_result(local_id, remote_id)
@@ -109,6 +122,11 @@ if __name__ == "__main__":
     no_tls = os.getenv("LS_NO_TLS")
     if no_tls is None:
         context = ('server.crt', 'server.key')
-        app.run(host='0.0.0.0', port=5000, ssl_context=context, threaded=True, debug=False)
+        app.run(
+            host='0.0.0.0',
+            port=5000,
+            ssl_context=context,
+            threaded=True,
+            debug=False)
     else:
         app.run(host='0.0.0.0', port=5000, threaded=True, debug=False)

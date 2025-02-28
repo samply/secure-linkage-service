@@ -1,6 +1,7 @@
 from linkserv.secureepilinker import SecureEpilinker
 from linkserv.linkresult import LinkageResult
 
+
 class LinkageServer:
     def __init__(self):
         # both are maps/dictionaries
@@ -8,7 +9,8 @@ class LinkageServer:
         self.computations = {}
 
     def add_epilinker(self, epilinker_id, key, padding):
-        self.epilinker[epilinker_id] = SecureEpilinker(epilinker_id, key, padding)
+        self.epilinker[epilinker_id] = SecureEpilinker(
+            epilinker_id, key, padding)
 
     def generate_ids(self, remote_id, count):
         if remote_id in self.epilinker:
@@ -31,16 +33,19 @@ class LinkageServer:
             raise KeyError('Invalid Role')
 
         # multiple computations can be processed in parallel but only one per server-client pair. Very inefficiently handled here.
-        # This is a "bookkeeping" section, where we check that every piece of data gets sent to the right place.
+        # This is a "bookkeeping" section, where we check that every piece of
+        # data gets sent to the right place.
         if client_id in self.computations:
             if server_id in self.computations[client_id]:
                 self.computations[client_id][server_id].set_share(data)
             else:
-                self.computations[client_id][server_id] = LinkageResult(self.get_epilinker(client_id), self.get_epilinker(server_id))
+                self.computations[client_id][server_id] = LinkageResult(
+                    self.get_epilinker(client_id), self.get_epilinker(server_id))
                 self.computations[client_id][server_id].set_share(data)
         else:
             self.computations[client_id] = {}
-            self.computations[client_id][server_id] = LinkageResult(self.get_epilinker(client_id), self.get_epilinker(server_id))
+            self.computations[client_id][server_id] = LinkageResult(
+                self.get_epilinker(client_id), self.get_epilinker(server_id))
             self.computations[client_id][server_id].set_share(data)
 
     def is_result_ready(self, client_id, server_id):
