@@ -94,7 +94,7 @@ def linkageResult(local_id, remote_id):
                     return make_response('No result from server', 408)
                 # Check whether 408 is actually correct
 
-                return 'Recieved server result'
+                return 'Received server result'
             return make_response('Invalid JSON', 400)
         except Exception as e:
             print(type(e), e)
