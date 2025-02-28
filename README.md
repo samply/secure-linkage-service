@@ -6,31 +6,45 @@
 * python3-venv (built-in into Python since Python 3.3)
 
 
-## Running the server
+## Setup
 
-### Using `venv`
+The server runs in a Virtual Environment (via `venv`).
 
 ```shell
-# Create a virtual environment to isolate the project denpendencies
+# Create the virtual environment
 python3 -m venv ./venv
 
-# Activate it
+# Activate the virtual environment
 source venv/bin/activate
 
 # Install the dependencies
 pip3 install -r requirements.txt
 
+# Once you are done,
+# you should deactivate the virtual environment
+deactivate
+```
+
+## Usage
+
+This assumes the system has already been setup (see previous step).
+
+```shell
+# Activate the virtual environment
+# (if not already inside it)
+source venv/bin/activate
+
 # Run the tests
 pytest
 
-# Start the daemon (without setting up TLS)
+# Start the server in development mode (without TLS)
 LS_NO_TLS=true python3 src/main.py
 
 ...
 
-# After execution, deactivate the virtual environment
+# Once you are done,
+# you should deactivate the virtual environment
 deactivate
-
 ```
 
 
