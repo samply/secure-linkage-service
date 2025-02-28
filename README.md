@@ -3,7 +3,7 @@
 
 ## Requirements
 
-* Python 3.7+
+* Python 3.13+
 * python3-venv (built-in into Python since Python 3.3)
 
 
