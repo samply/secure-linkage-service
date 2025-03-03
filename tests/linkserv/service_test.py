@@ -1,3 +1,4 @@
+import simplejson as json
 import pytest
 from main import app, LinServ
 
@@ -84,3 +85,44 @@ def test_get_fresh_ids_count_3(client, mocker, remote_id):
     assert response_json is not None
     assert 'linkageIds' in response_json
     assert response_json['linkageIds'] == expected_ids
+
+
+@pytest.mark.parametrize("local_id, remote_id", [("tuda", "dkfz"),
+                                                 ("tuda", "charite"),
+                                                 ("dkfz", "tuda"),
+                                                 ("dkfz", "charite"),
+                                                 ("charite", "tuda"),
+                                                 ("charite", "dkfz")
+                                                 ])
+def test_server_linkage_result_role_server(client, local_id, remote_id):
+
+    data = {
+        "role": "server",
+        "result": [
+            {
+                "match": 0,
+                "tentativeMatch": 1,
+                "bestIndex": 2
+            },
+            {
+                "match": 1,
+                "tentativeMatch": 0,
+                "bestIndex": 0
+            },
+            {
+                "match": 0,
+                "tentativeMatch": 0,
+                "bestIndex": 4
+            }
+        ],
+        "ids": ["aGVsbG93b3JsZA==", "ZGF0YXNjaWVuY2U=", "cHl0aG9uaXNmdW4=", "cHJpdmFjeXByZXNlcnZpbmc=", "bGlua2FnZXN5c3RlbQ=="]
+    }
+
+    response = client.post(
+        f'/linkageResult/{local_id}/{remote_id}',
+        data=json.dumps(data),
+        content_type='application/json'
+    )
+
+    assert response.status_code == 200
+    assert response.data.decode() == "Received server result"
