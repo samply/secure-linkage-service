@@ -19,7 +19,7 @@ python3 -m venv ./venv
 source venv/bin/activate
 
 # Install the dependencies
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 
 # Once you are done,
 # you should deactivate the virtual environment
@@ -161,6 +161,18 @@ curl -v http://localhost:5000/linkageResult/tuda/dkfz \
 * shutting down connection #0
 {"result": [{"linkageId": "+g5vQbykaWQZRr0/W5Dx04k="}, {"linkageId": "w2lC/gngZrveiIsB5wxgBxQ="}, {"linkageId": "7ckxg4tR7msYW0TbB7E1KZc="}]}%
 ```
+
+
+## Known problems
+
+In some occasions, when restarting the server, you may get an import error.
+
+```python3
+ImportError: cannot import name 'generate_etag' from partially initialized module 'werkzeug.http' (most likely due to a circular import)
+```
+
+Just re-create the virtual environment and try again.
+It should work just fine.
 
 
 ## License
