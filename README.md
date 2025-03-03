@@ -51,7 +51,7 @@ deactivate
 ### Trying a Linkage
 
 1. Start the server (see above).
-2. From another terminal, send a request with a *server* role(example below).
+2. From another terminal, send a request with a *server* role (example below).
 3. Within 20 seconds (default timeout), send a request with a *client* role (example below).
 
 
