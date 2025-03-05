@@ -236,7 +236,7 @@ class TestLinkageServerRegression:
         assert len(result_dict["result"]) == len(expected_pattern["result"])
 
         # Test clearing the result
-        linkage_server.clear_result("tuda", "dkfz")
+        linkage_server.reset_result("tuda", "dkfz")
 
         # After clearing, the computation should no longer be ready
         assert linkage_server.is_result_ready("tuda", "dkfz") is False

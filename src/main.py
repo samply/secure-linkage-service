@@ -98,9 +98,9 @@ def linkageResult(local_id, remote_id):
                     if not timeout:
                         result = LinServ.get_linkage_result(
                             local_id, remote_id)
-                        LinServ.clear_result(local_id, remote_id)
+                        LinServ.reset_result(local_id, remote_id)
                         return result
-                    LinServ.clear_result(local_id, remote_id)
+                    LinServ.reset_result(local_id, remote_id)
                     return make_response('No result from server', 408)
                 # Check whether 408 is actually correct
 

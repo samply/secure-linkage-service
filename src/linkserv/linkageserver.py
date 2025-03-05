@@ -57,5 +57,5 @@ class LinkageServer:
     def get_linkage_result(self, client_id, server_id):
         return self.computations[client_id][server_id].get_linkage_result()
 
-    def clear_result(self, client_id, server_id):
-        self.computations[client_id][server_id].clear()
+    def reset_result(self, client_id, server_id):
+        self.computations[client_id][server_id].reset()

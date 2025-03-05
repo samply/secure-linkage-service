@@ -21,7 +21,7 @@ class LinkageResult:
         self.server_data = False
         self.server_ids = []
 
-    def clear(self):
+    def reset(self):
         self.client_data = False
         self.server_data = False
         self.server_ids = []
@@ -94,14 +94,14 @@ class LinkageResult:
             # if no match...
             else:
                 single = len(self.client_matches) == 1
-                self.clear()
+                self.reset()
                 if single:
                     # we generate a random fresh ID for the client
                     return json.dumps(
                         {'result': {'linkageId': self.client.generate_id()}})
                 else:
                     ids.append({'linkageId': self.client.generate_id()})
-        self.clear()
+        self.reset()
         return json.dumps({'result': ids})
 
     def is_ready(self):
