@@ -1,10 +1,5 @@
-from linkserv.secureepilinker import SecureEpilinker
 from flask import make_response
-import base64
-import binascii
-import operator
 import simplejson as json
-import sys
 
 
 class LinkageResult:

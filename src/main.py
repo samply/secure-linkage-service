@@ -4,7 +4,6 @@ from flask import request
 from flask import make_response
 from linkserv.linkageserver import LinkageServer
 from Crypto import Random
-import simplejson as json
 import time
 import os
 
