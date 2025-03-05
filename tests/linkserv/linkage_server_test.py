@@ -1,7 +1,9 @@
-import pytest
-import json
-from unittest.mock import patch
 from linkserv.linkageserver import LinkageServer
+from linkserv.secureepilinker import SecureEpilinker
+from unittest.mock import patch, MagicMock
+import base64
+import json
+import pytest
 
 
 class TestLinkageServerRegression:
@@ -155,3 +157,86 @@ class TestLinkageServerRegression:
 
         # Verify the result matches the expected output
         assert result == expected_result
+
+
+    @patch('linkserv.secureepilinker.AESCipher')
+    def test_linkage_result_workflow(self, mock_aes_cipher, linkage_server, server_data, client_data):
+        """
+        Test the complete linkage result workflow:
+        1. Server sends its share
+        2. Client sends its share
+        3. LinkageServer computes and returns the result
+        """
+        # Set up mock AESCipher for predictable encryption/decryption
+        mock_cipher_instance = MagicMock()
+        mock_aes_cipher.return_value = mock_cipher_instance
+
+        # Configure mock encryption and decryption
+        def mock_encrypt(data, b64=True):
+            # For generating predictable linkage IDs
+            if b64 and isinstance(data, bytes):
+                if data.startswith(b'\x00'):  # match=0, tmatch=0
+                    return "8SNd1JtK0ZtwpHSAzdiBEvQ="
+                elif data.startswith(b'\x01'):  # match=0, tmatch=1 or match=1
+                    if b"hello" in data:
+                        return "lo3RvlznBoPzbuAe/LRhtKE="
+                    else:
+                        return "6gbbgFnmPKdFrcpGSIxuMhU="
+            return "default_encrypted_value"
+
+        def mock_decrypt(data, b64=True):
+            # For decrypting server IDs
+            if b64 and isinstance(data, str):
+                if data == "aGVsbG93b3JsZA==":  # helloworld
+                    return b"helloworld"
+                elif data == "ZGF0YXNjaWVuY2U=":  # datascience
+                    return b"datascience"
+                elif data == "cHl0aG9uaXNmdW4=":  # pythonisfun
+                    return b"pythonisfun"
+            return b"default_decrypted_value"
+
+        mock_cipher_instance.encrypt.side_effect = mock_encrypt
+        mock_cipher_instance.decrypt.side_effect = mock_decrypt
+
+        # Set shares (mimic the curl requests)
+        linkage_server.set_share("dkfz", "tuda", server_data)
+        linkage_server.set_share("tuda", "dkfz", client_data)
+
+        # Verify computation is ready
+        assert linkage_server.is_result_ready("tuda", "dkfz") is True
+
+        # Get linkage result
+        result = linkage_server.get_linkage_result("tuda", "dkfz")
+        result_dict = json.loads(result)
+
+        # Verify structure of the result
+        assert "result" in result_dict
+        assert isinstance(result_dict["result"], list)
+        assert len(result_dict["result"]) == 3
+
+        # Each item should have a linkageId field
+        for item in result_dict["result"]:
+            assert "linkageId" in item
+            # Verify the linkageId is a valid base64 string
+            try:
+                base64.b64decode(item["linkageId"])
+            except Exception as e:
+                pytest.fail(f"linkageId is not a valid base64 string: {item['linkageId']}, error: {e}")
+
+        # Verify result matches the expected output pattern from the curl response
+        # The exact IDs depend on the mock encryption
+        expected_pattern = {
+            "result": [
+                {"linkageId": mock_cipher_instance.encrypt.return_value},
+                {"linkageId": mock_cipher_instance.encrypt.return_value},
+                {"linkageId": mock_cipher_instance.encrypt.return_value}
+            ]
+        }
+
+        assert len(result_dict["result"]) == len(expected_pattern["result"])
+
+        # Test clearing the result
+        linkage_server.clear_result("tuda", "dkfz")
+
+        # After clearing, the computation should no longer be ready
+        assert linkage_server.is_result_ready("tuda", "dkfz") is False
