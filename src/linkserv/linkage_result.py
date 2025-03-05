@@ -28,7 +28,6 @@ class LinkageResult:
         self.server_idxs = []
 
     def set_share(self, json_data):
-        # data = json.load(json_data)
         data = json_data
         if (data['role'] == 'server'):
             for res in data['result']:
