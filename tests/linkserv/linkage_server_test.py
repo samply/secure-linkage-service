@@ -1,4 +1,4 @@
-from linkserv.linkageserver import LinkageServer
+from linkserv.linkage_server import LinkageServer
 from unittest.mock import patch, MagicMock
 import base64
 import json
@@ -127,8 +127,8 @@ class TestLinkageServerRegression:
         assert isinstance(result_dict["result"], list)
         assert len(result_dict["result"]) == 3
 
-    @patch('linkserv.secureepilinker.SecureEpilinker.encrypt')
-    @patch('linkserv.secureepilinker.SecureEpilinker.decrypt')
+    @patch('linkserv.secure_epi_linker.SecureEpilinker.encrypt')
+    @patch('linkserv.secure_epi_linker.SecureEpilinker.decrypt')
     def test_expected_output(self, mock_decrypt, mock_encrypt, linkage_server, server_data, client_data):
         """
         Test the expected output format by mocking the lower-level encryption and decryption functions.
@@ -172,7 +172,7 @@ class TestLinkageServerRegression:
         assert result == expected_result
 
 
-    @patch('linkserv.secureepilinker.AESCipher')
+    @patch('linkserv.secure_epi_linker.AESCipher')
     def test_linkage_result_workflow(self, mock_aes_cipher, linkage_server, server_data, client_data):
         """
         Test the complete linkage result workflow:

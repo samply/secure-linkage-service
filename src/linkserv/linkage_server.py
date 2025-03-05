@@ -1,5 +1,5 @@
-from linkserv.linkresult import LinkageResult
-from linkserv.secureepilinker import SecureEpilinker
+from linkserv.linkage_result import LinkageResult
+from linkserv.secure_epi_linker import SecureEpilinker
 
 
 class LinkageServer:
