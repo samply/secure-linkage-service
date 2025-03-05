@@ -54,6 +54,9 @@ class LinkageResult:
         else:
             return make_response('Invalid role', 400)
 
+    def is_ready(self):
+        return self.server_data and self.client_data
+
     def get_linkage_result(self):
         # All inputs set? And all lists well formed?
         assert self.server_data and self.client_data is True
@@ -103,6 +106,3 @@ class LinkageResult:
                     ids.append({'linkageId': self.client.generate_id()})
         self.reset()
         return json.dumps({'result': ids})
-
-    def is_ready(self):
-        return self.server_data and self.client_data
