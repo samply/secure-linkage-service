@@ -1,5 +1,4 @@
 from linkserv.linkageserver import LinkageServer
-from linkserv.secureepilinker import SecureEpilinker
 from unittest.mock import patch, MagicMock
 import base64
 import json
@@ -128,13 +127,24 @@ class TestLinkageServerRegression:
         assert isinstance(result_dict["result"], list)
         assert len(result_dict["result"]) == 3
 
-    @patch('linkserv.linkresult.LinkageResult.get_linkage_result')
-    def test_expected_output(self, mock_get_linkage_result, linkage_server, server_data, client_data):
+    @patch('linkserv.secureepilinker.SecureEpilinker.encrypt')
+    @patch('linkserv.secureepilinker.SecureEpilinker.decrypt')
+    def test_expected_output(self, mock_decrypt, mock_encrypt, linkage_server, server_data, client_data):
         """
-        Test that get_linkage_result returns the expected output format by mocking the LinkageResult class.
-        This matches the exact response format from the curl output.
+        Test the expected output format by mocking the lower-level encryption and decryption functions.
+        This focuses on testing the actual behavior rather than mocking the static method itself.
         """
-        # Mock the get_linkage_result method to return the exact expected output
+        # Use simpler direct mapping approach for mocks
+        mock_decrypt.return_value = b"decrypted_id"  # All IDs decrypt to the same value for simplicity
+
+        # We know there are 3 calls to encrypt, so set up specific return values for each call
+        mock_encrypt.side_effect = [
+            "8SNd1JtK0ZtwpHSAzdiBEvQ=",  # First record
+            "lo3RvlznBoPzbuAe/LRhtKE=",  # Second record
+            "6gbbgFnmPKdFrcpGSIxuMhU="   # Third record
+        ]
+
+        # Expected result based on our mocked encryption/decryption
         expected_result = json.dumps({
             "result": [
                 # The following are base64 encoded encrypted linkage IDs:
@@ -146,7 +156,6 @@ class TestLinkageServerRegression:
                 {"linkageId": "6gbbgFnmPKdFrcpGSIxuMhU="}
             ]
         })
-        mock_get_linkage_result.return_value = expected_result
 
         # Set shares
         linkage_server.set_share("dkfz", "tuda", server_data)
@@ -154,6 +163,10 @@ class TestLinkageServerRegression:
 
         # Get linkage result
         result = linkage_server.get_linkage_result("tuda", "dkfz")
+
+        # Verify the mocks were called
+        assert mock_decrypt.call_count == 3, "decrypt should have been called 3 times"
+        assert mock_encrypt.call_count == 3, "encrypt should have been called 3 times"
 
         # Verify the result matches the expected output
         assert result == expected_result

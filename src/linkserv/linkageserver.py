@@ -55,7 +55,53 @@ class LinkageServer:
         return self.computations[client_id][server_id].is_ready()
 
     def get_linkage_result(self, client_id, server_id):
-        return self.computations[client_id][server_id].get_linkage_result()
+        linkage_result = self.computations[client_id][server_id]
+
+        # Create client data
+        client_data = {
+            'result': [
+                {
+                    'match': match,
+                    'tentativeMatch': tmatch,
+                    'bestIndex': idx
+                }
+                for match, tmatch, idx in zip(
+                    linkage_result.client_matches,
+                    linkage_result.client_tmatches,
+                    linkage_result.client_idxs
+                )
+            ]
+        }
+
+        # Create server data
+        server_data = {
+            'result': [
+                {
+                    'match': match,
+                    'tentativeMatch': tmatch,
+                    'bestIndex': idx
+                }
+                for match, tmatch, idx in zip(
+                    linkage_result.server_matches,
+                    linkage_result.server_tmatches,
+                    linkage_result.server_idxs
+                )
+            ],
+            'ids': linkage_result.server_ids
+        }
+
+        # Use the static method directly
+        result = LinkageResult.get_linkage_result(
+            client_data,
+            server_data,
+            self.epilinker[client_id],
+            self.epilinker[server_id]
+        )
+
+        # Reset the state after computation
+        self.reset_result(client_id, server_id)
+
+        return result
 
     def reset_result(self, client_id, server_id):
         self.computations[client_id][server_id].reset()

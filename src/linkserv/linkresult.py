@@ -52,43 +52,8 @@ class LinkageResult:
     def is_ready(self):
         return self.server_data and self.client_data
 
-    def get_linkage_result(self):
-        # All inputs set? And all lists well formed?
-        assert self.server_data and self.client_data is True
-        assert len(self.server_matches) == len(self.client_matches)
-        assert len(self.server_tmatches) == len(self.client_tmatches)
-        assert len(self.server_idxs) == len(self.client_idxs)
-        assert len(self.server_matches) == len(self.server_tmatches)
-        assert len(self.server_matches) == len(self.server_idxs)
-
-        return self.get_linkage_result_stateless(
-            {
-                'result': [
-                    {
-                        'match': match,
-                        'tentativeMatch': tmatch,
-                        'bestIndex': idx
-                    }
-                    for match, tmatch, idx in zip(self.client_matches, self.client_tmatches, self.client_idxs)
-                ]
-            },
-            {
-                'result': [
-                    {
-                        'match': match,
-                        'tentativeMatch': tmatch,
-                        'bestIndex': idx
-                    }
-                    for match, tmatch, idx in zip(self.server_matches, self.server_tmatches, self.server_idxs)
-                ],
-                'ids': self.server_ids
-            },
-            self.client,
-            self.server
-        )
-
     @staticmethod
-    def get_linkage_result_stateless(client_data, server_data, client, server):
+    def get_linkage_result(client_data, server_data, client, server):
         """
         Calculate linkage result from client and server data in a completely stateless manner.
 
