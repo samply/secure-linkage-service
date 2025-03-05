@@ -103,7 +103,7 @@ def test_server_linkage_result_role_server(client, local_id, remote_id):
             {"match": 1, "tentativeMatch": 0, "bestIndex": 0},
             {"match": 0, "tentativeMatch": 0, "bestIndex": 4}
         ],
-        "ids": ["aGVsbG93b3JsZA==", "ZGF0YXNjaWVuY2U=", "cHl0aG9uaXNmdW4=", "cHJpdmFjeXByZXNlcnZpbmc=", "bGlua2FnZXN5c3RlbQ=="]
+        "ids": ["aGVsbG93b3JsZA==", "ZGF0YXNjaWVuY2U=", "cHl0aG9uaXNmdW4="]
     }
 
     response = client.post(
