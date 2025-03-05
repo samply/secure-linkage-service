@@ -60,44 +60,114 @@ class LinkageResult:
         assert len(self.server_idxs) == len(self.client_idxs)
         assert len(self.server_matches) == len(self.server_tmatches)
         assert len(self.server_matches) == len(self.server_idxs)
+
+        return self.get_linkage_result_stateless(
+            {
+                'result': [
+                    {
+                        'match': match,
+                        'tentativeMatch': tmatch,
+                        'bestIndex': idx
+                    }
+                    for match, tmatch, idx in zip(self.client_matches, self.client_tmatches, self.client_idxs)
+                ]
+            },
+            {
+                'result': [
+                    {
+                        'match': match,
+                        'tentativeMatch': tmatch,
+                        'bestIndex': idx
+                    }
+                    for match, tmatch, idx in zip(self.server_matches, self.server_tmatches, self.server_idxs)
+                ],
+                'ids': self.server_ids
+            },
+            self.client,
+            self.server
+        )
+
+    @staticmethod
+    def get_linkage_result_stateless(client_data, server_data, client, server):
+        """
+        Calculate linkage result from client and server data in a completely stateless manner.
+
+        Args:
+            client_data: dict with client matching results containing arrays of match, tentativeMatch, and bestIndex.
+            server_data: dict with server matching results and ids.
+            client: client object used for encryption and id generation.
+            server: server object used for decryption.
+
+        Returns:
+            JSON string containing the linkage result
+        """
+        # Extract data from parameters
+        client_matches = []
+        client_tmatches = []
+        client_idxs = []
+        server_matches = []
+        server_tmatches = []
+        server_idxs = []
+        server_ids = server_data['ids']
+
+        # Extract server data
+        for res in server_data['result']:
+            server_matches.append(res['match'])
+            server_tmatches.append(res['tentativeMatch'])
+            server_idxs.append(res['bestIndex'])
+
+        # Extract client data
+        for res in client_data['result']:
+            client_matches.append(res['match'])
+            client_tmatches.append(res['tentativeMatch'])
+            client_idxs.append(res['bestIndex'])
+
+        # Validate inputs are well formed
+        assert len(server_matches) == len(client_matches)
+        assert len(server_tmatches) == len(client_tmatches)
+        assert len(server_idxs) == len(client_idxs)
+        assert len(server_matches) == len(server_tmatches)
+        assert len(server_matches) == len(server_idxs)
+
         # Compute clear values
         ids = []
         for cmatch, smatch, ctmatch, stmatch, cidx, sidx in zip(
-                self.client_matches, self.server_matches, self.client_tmatches, self.server_tmatches, self.client_idxs, self.server_idxs):
-            # in the following three lines the linkage result is "decrypted", i.e., reconstructed from the shares.
-            # it consists of match-bit, tentative match bit, and best matching server-patient ID
+                client_matches, server_matches, client_tmatches, server_tmatches, client_idxs, server_idxs):
+            # In the following three lines the linkage result is "decrypted", i.e., reconstructed from the shares.
+            # It consists of match-bit, tentative match bit, and best matching server-patient ID.
             # This is the critical part of the code.
             match = cmatch ^ smatch
             tmatch = ctmatch ^ stmatch
-            bestInd = cidx ^ sidx
+            bestind = cidx ^ sidx
+
             if match or tmatch:
                 # Decrypt ID with server key and encrypt with client key prepend tmatch bit
-                # match set implies tmatch set
+                # A match set implies a tmatch set.
                 # If it's a match or a tentative match, we prefix the decrypted
                 # id from the server with the tentative match bit and encrypt
                 # everything with the client's key.
-                client_linkage_id = self.client.encrypt(
+                client_linkage_id = client.encrypt(
                     bytes(tmatch) +
-                    self.server.decrypt(
-                        self.server_ids[bestInd],
+                    server.decrypt(
+                        server_ids[bestind],
                         False))
-                # output is differently formated based on one or multiple
-                # results (1:n linkage or n:m linkage)
-                single = len(self.client_matches) == 1
+                # Output is differently formated,
+                # based on one or multiple results.
+                # (1:n linkage or n:m linkage)
+                single = len(client_matches) == 1
                 if single:
                     return json.dumps(
                         {'result': {'linkageId': client_linkage_id}})
                 else:
                     ids.append({'linkageId': client_linkage_id})
-            # if no match...
+            # If no match...
             else:
-                single = len(self.client_matches) == 1
-                self.reset()
+                single = len(client_matches) == 1
                 if single:
-                    # we generate a random fresh ID for the client
+                    # ...we generate a random fresh ID for the client
                     return json.dumps(
-                        {'result': {'linkageId': self.client.generate_id()}})
+                        {'result': {'linkageId': client.generate_id()}})
                 else:
-                    ids.append({'linkageId': self.client.generate_id()})
-        self.reset()
+                    ids.append({'linkageId': client.generate_id()})
+
         return json.dumps({'result': ids})
