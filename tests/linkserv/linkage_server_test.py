@@ -80,8 +80,8 @@ class TestLinkageServerRegression:
             ]
         }
 
-
-    def test_actual_computation(self, linkage_server, server_data, client_data):
+    def test_actual_computation(
+            self, linkage_server, server_data, client_data):
         """
         Test the actual computation logic without mocking the cryptography.
         This test verifies that the XOR operations in get_linkage_result work correctly.
@@ -92,7 +92,8 @@ class TestLinkageServerRegression:
 
         # Manually compute the expected match results using XOR
         expected_matches = []
-        for idx, (client_rec, server_rec) in enumerate(zip(client_data["result"], server_data["result"])):
+        for idx, (client_rec, server_rec) in enumerate(
+                zip(client_data["result"], server_data["result"])):
             match_ = client_rec["match"] ^ server_rec["match"]
             tmatch = client_rec["tentativeMatch"] ^ server_rec["tentativeMatch"]
             best_idx = client_rec["bestIndex"] ^ server_rec["bestIndex"]
@@ -129,15 +130,18 @@ class TestLinkageServerRegression:
 
     @patch('linkserv.secure_epi_linker.SecureEpilinker.encrypt')
     @patch('linkserv.secure_epi_linker.SecureEpilinker.decrypt')
-    def test_expected_output(self, mock_decrypt, mock_encrypt, linkage_server, server_data, client_data):
+    def test_expected_output(
+            self, mock_decrypt, mock_encrypt, linkage_server, server_data, client_data):
         """
         Test the expected output format by mocking the lower-level encryption and decryption functions.
         This focuses on testing the actual behavior rather than mocking the static method itself.
         """
         # Use simpler direct mapping approach for mocks
-        mock_decrypt.return_value = b"decrypted_id"  # All IDs decrypt to the same value for simplicity
+        # All IDs decrypt to the same value for simplicity
+        mock_decrypt.return_value = b"decrypted_id"
 
-        # We know there are 3 calls to encrypt, so set up specific return values for each call
+        # We know there are 3 calls to encrypt, so set up specific return
+        # values for each call
         mock_encrypt.side_effect = [
             "8SNd1JtK0ZtwpHSAzdiBEvQ=",  # First record
             "lo3RvlznBoPzbuAe/LRhtKE=",  # Second record
@@ -148,11 +152,14 @@ class TestLinkageServerRegression:
         expected_result = json.dumps({
             "result": [
                 # The following are base64 encoded encrypted linkage IDs:
-                # 8SNd1JtK0ZtwpHSAzdiBEvQ= - Encrypted ID combining match status and pythonisfun
+                # 8SNd1JtK0ZtwpHSAzdiBEvQ= - Encrypted ID combining match
+                # status and pythonisfun
                 {"linkageId": "8SNd1JtK0ZtwpHSAzdiBEvQ="},
-                # lo3RvlznBoPzbuAe/LRhtKE= - Encrypted ID combining match status and helloworld
+                # lo3RvlznBoPzbuAe/LRhtKE= - Encrypted ID combining match
+                # status and helloworld
                 {"linkageId": "lo3RvlznBoPzbuAe/LRhtKE="},
-                # 6gbbgFnmPKdFrcpGSIxuMhU= - Encrypted ID combining match status and linkagesystem
+                # 6gbbgFnmPKdFrcpGSIxuMhU= - Encrypted ID combining match
+                # status and linkagesystem
                 {"linkageId": "6gbbgFnmPKdFrcpGSIxuMhU="}
             ]
         })
@@ -171,9 +178,9 @@ class TestLinkageServerRegression:
         # Verify the result matches the expected output
         assert result == expected_result
 
-
     @patch('linkserv.secure_epi_linker.AESCipher')
-    def test_linkage_result_workflow(self, mock_aes_cipher, linkage_server, server_data, client_data):
+    def test_linkage_result_workflow(
+            self, mock_aes_cipher, linkage_server, server_data, client_data):
         """
         Test the complete linkage result workflow:
         1. Server sends its share
@@ -234,7 +241,9 @@ class TestLinkageServerRegression:
             try:
                 base64.b64decode(item["linkageId"])
             except Exception as e:
-                pytest.fail(f"linkageId is not a valid base64 string: {item['linkageId']}, error: {e}")
+                pytest.fail(
+                    f"linkageId is not a valid base64 string: {
+                        item['linkageId']}, error: {e}")
 
         # Verify result matches the expected output pattern from the curl response
         # The exact IDs depend on the mock encryption
