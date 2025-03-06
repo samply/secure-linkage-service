@@ -1,0 +1,16 @@
+{
+  "role": "server",
+  "result": {
+    "match": 1,
+    "tentativeMatch": 1,
+    "bestIndex": "N6c="
+  },
+  "ids": [
+    "PseudonymA",
+    "PseudonymB",
+    "PseudonymC",
+    "PseudonymD",
+    "PseudonymE"
+  ]
+}
+
