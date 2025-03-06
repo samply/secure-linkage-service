@@ -8,7 +8,7 @@ use tokio::net::TcpListener;
 use tracing::info;
 
 use securelinkageservice::{
-    config::LogFormat, routers::build_main_router, AppState, Config, Party,
+    config::LogFormat, routers::build_main_router, AppState, Config, Party
 };
 use tracing_subscriber::EnvFilter;
 mod banner;
@@ -58,6 +58,8 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState {
         config: Box::leak(Box::new(config)),
         parties: Arc::new(RwLock::new(HashMap::new())),
+        computations: Arc::new(RwLock::new(HashMap::new())),
+        results: Arc::new(RwLock::new(HashMap::new())),
     };
     {
         let mut parties = state.parties.write().expect("CANNOT LOCK PARTIES");

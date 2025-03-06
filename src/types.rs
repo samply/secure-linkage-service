@@ -1,9 +1,8 @@
-
 use anyhow::{bail, Result};
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use serde::{
     de::{self, Unexpected},
-    Deserialize, Deserializer,
+    Deserialize, Deserializer, Serialize,
 };
 
 use crate::Role;
@@ -81,7 +80,7 @@ impl BooleanShare {
             bail!("Reconstructed usize too long: {} bytes", vec_result.len());
         }
         // Fill up to 64bit len, will do nothing if already 8 bytes
-        vec_result.reserve(8-vec_result.len());
+        vec_result.reserve(8 - vec_result.len());
         for i in vec_result.len()..8 {
             vec_result.push(0);
         }
@@ -100,7 +99,7 @@ pub struct Computation {
     server_ids: Option<Vec<String>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct CompleteComputation {
     match_bit: bool,
     tmatch_bit: bool,
@@ -108,10 +107,26 @@ pub struct CompleteComputation {
 }
 
 impl Computation {
-    fn new()-> Self {
-        Computation { client_set: false, server_set: false, match_bit: BooleanShare { num_shares: 2, shares: Vec::with_capacity(2) }, tmatch_bit: BooleanShare { num_shares: 2, shares: Vec::with_capacity(2) }, best_index: BooleanShare { num_shares: 2, shares: Vec::with_capacity(2) }, server_ids: None }
+    pub fn new() -> Self {
+        Computation {
+            client_set: false,
+            server_set: false,
+            match_bit: BooleanShare {
+                num_shares: 2,
+                shares: Vec::with_capacity(2),
+            },
+            tmatch_bit: BooleanShare {
+                num_shares: 2,
+                shares: Vec::with_capacity(2),
+            },
+            best_index: BooleanShare {
+                num_shares: 2,
+                shares: Vec::with_capacity(2),
+            },
+            server_ids: None,
+        }
     }
-    fn add_result(&mut self, share: SMPCResult) -> Result<()> {
+    pub fn add_result(&mut self, share: SMPCResult) -> Result<()> {
         if (self.client_set && share.role == Role::Client)
             || (self.server_set && share.role == Role::Server)
         {
@@ -135,16 +150,26 @@ impl Computation {
             Ok(())
         }
     }
-    fn reconstruct_result(&self) -> Result<CompleteComputation> {
-        if self.client_set & self.server_set == false {
+
+    pub fn is_result_ready(&self) -> bool {
+        self.client_set & self.server_set
+    }
+
+    pub fn reset(&mut self) {
+        *self = Computation::new();
+    }
+
+    pub fn reconstruct_result(&self) -> Result<CompleteComputation> {
+        if !self.is_result_ready() {
             bail!("Not all shares set!");
-        } else 
-        {
+        } else {
             let id = self.best_index.reconstruct_usize()?;
-            Ok(CompleteComputation { match_bit: self.match_bit.reconstruct_bool()?, tmatch_bit: self.tmatch_bit.reconstruct_bool()?, best_id: self.server_ids.as_ref().unwrap()[id].to_string() })
+            Ok(CompleteComputation {
+                match_bit: self.match_bit.reconstruct_bool()?,
+                tmatch_bit: self.tmatch_bit.reconstruct_bool()?,
+                best_id: self.server_ids.as_ref().unwrap()[id].to_string(),
+            })
         }
-
-
     }
 }
 

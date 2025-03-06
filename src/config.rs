@@ -49,7 +49,7 @@ const CLAP_FOOTER: &str = "For proxy support, environment variables HTTP_PROXY, 
 )]
 struct CliArgs {
     /// The Socket address the server should listen on
-    #[clap(long, env = "LISTEN", default_value = "[::]:8081")]
+    #[clap(long, env = "LISTEN", default_value = "[::]:9081")]
     listen: SocketAddr,
 
     /// Defines how the log output will be formatted
