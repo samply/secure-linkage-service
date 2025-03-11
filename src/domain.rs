@@ -11,7 +11,7 @@ pub struct TentativeMatchBit(pub u64);
 pub struct ConfirmedMatchBit(pub u64);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct BestMatchIndex(pub u64);
+pub struct IndexOfBestMatch(pub u64);
 
 //
 // String-containing types using Rc<str> for efficient sharing
@@ -54,16 +54,16 @@ impl EncryptionKey {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResultData {
-    pub tentative_match: TentativeMatchBit,
     pub confirmed_match: ConfirmedMatchBit,
-    pub index_of_best_match: BestMatchIndex,
+    pub tentative_match: TentativeMatchBit,
+    pub index_of_best_match: IndexOfBestMatch,
 }
 
 impl ResultData {
     pub fn new(
-        tentative_match: TentativeMatchBit,
         confirmed_match: ConfirmedMatchBit,
-        index_of_best_match: BestMatchIndex,
+        tentative_match: TentativeMatchBit,
+        index_of_best_match: IndexOfBestMatch,
     ) -> Self {
         Self {
             tentative_match,
@@ -74,18 +74,18 @@ impl ResultData {
 
     pub fn from_strings(tentative_match: &str, confirmed_match: &str, index: &str) -> Self {
         Self {
-            tentative_match: TentativeMatchBit(tentative_match.parse().unwrap_or(0)),
             confirmed_match: ConfirmedMatchBit(confirmed_match.parse().unwrap_or(0)),
-            index_of_best_match: BestMatchIndex(index.parse().unwrap_or(0)),
+            tentative_match: TentativeMatchBit(tentative_match.parse().unwrap_or(0)),
+            index_of_best_match: IndexOfBestMatch(index.parse().unwrap_or(0)),
         }
     }
 
     // Default ResultData with all zeros
     pub fn empty() -> Self {
         Self {
-            tentative_match: TentativeMatchBit(0),
             confirmed_match: ConfirmedMatchBit(0),
-            index_of_best_match: BestMatchIndex(0),
+            tentative_match: TentativeMatchBit(0),
+            index_of_best_match: IndexOfBestMatch(0),
         }
     }
 }
