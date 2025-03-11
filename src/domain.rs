@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 //
-// Simple wrapper types that don't need Rc
+// Simple wrapper types for match data
 //
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,20 +49,45 @@ impl EncryptionKey {
 }
 
 //
-// Shared data structures
+// Result data structures
 //
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ShareData {
+pub struct ResultData {
     pub tentative_match: TentativeMatchBit,
     pub confirmed_match: ConfirmedMatchBit,
     pub index_of_best_match: BestMatchIndex,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ServerShareData {
-    pub share_data: ShareData,
-    pub id: RecordId,
+impl ResultData {
+    pub fn new(
+        tentative_match: TentativeMatchBit,
+        confirmed_match: ConfirmedMatchBit,
+        index_of_best_match: BestMatchIndex,
+    ) -> Self {
+        Self {
+            tentative_match,
+            confirmed_match,
+            index_of_best_match,
+        }
+    }
+
+    pub fn from_strings(tentative_match: &str, confirmed_match: &str, index: &str) -> Self {
+        Self {
+            tentative_match: TentativeMatchBit(tentative_match.parse().unwrap_or(0)),
+            confirmed_match: ConfirmedMatchBit(confirmed_match.parse().unwrap_or(0)),
+            index_of_best_match: BestMatchIndex(index.parse().unwrap_or(0)),
+        }
+    }
+
+    // Default ResultData with all zeros
+    pub fn empty() -> Self {
+        Self {
+            tentative_match: TentativeMatchBit(0),
+            confirmed_match: ConfirmedMatchBit(0),
+            index_of_best_match: BestMatchIndex(0),
+        }
+    }
 }
 
 //
@@ -71,49 +96,13 @@ pub struct ServerShareData {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClientLinkageData {
-    pub share: Rc<Vec<ShareData>>,
+    pub share_data: Rc<Vec<ResultData>>,
 }
 
 impl ClientLinkageData {
-    pub fn new(share_data: Vec<ShareData>) -> Self {
+    pub fn new(share_data: Vec<ResultData>) -> Self {
         Self {
-            share: Rc::new(share_data),
-        }
-    }
-
-    pub fn empty() -> Self {
-        Self {
-            share: Rc::new(Vec::new()),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ServerLinkageData {
-    pub share_data: Rc<Vec<ServerShareData>>,
-}
-
-impl ServerLinkageData {
-    pub fn new(share_data: Vec<ShareData>, ids: Vec<RecordId>) -> Self {
-        // Ensure share_data and ids have the same length
-        assert_eq!(
-            share_data.len(),
-            ids.len(),
-            "Share data and IDs must have the same length"
-        );
-
-        // Zip the share_data and ids together
-        let server_share = share_data
-            .into_iter()
-            .zip(ids.into_iter())
-            .map(|(share, id)| ServerShareData {
-                share_data: share,
-                id,
-            })
-            .collect();
-
-        Self {
-            share_data: Rc::new(server_share),
+            share_data: Rc::new(share_data),
         }
     }
 
@@ -122,13 +111,41 @@ impl ServerLinkageData {
             share_data: Rc::new(Vec::new()),
         }
     }
+}
 
-    // Helper to extract just the IDs
-    pub fn ids(&self) -> Vec<RecordId> {
-        self.share_data
-            .iter()
-            .map(|server_share| server_share.id.clone())
-            .collect()
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServerLinkageData {
+    pub share_data: Rc<Vec<ResultData>>,
+    pub record_ids: Rc<Vec<RecordId>>,
+}
+
+impl ServerLinkageData {
+    pub fn new(share_data: Vec<ResultData>, record_ids: Vec<RecordId>) -> Self {
+        Self {
+            share_data: Rc::new(share_data),
+            record_ids: Rc::new(record_ids),
+        }
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            share_data: Rc::new(Vec::new()),
+            record_ids: Rc::new(Vec::new()),
+        }
+    }
+
+    // Helper to get all record IDs
+    pub fn ids(&self) -> &[RecordId] {
+        self.record_ids.as_ref()
+    }
+
+    // Helper to get record ID at a specific index, with bounds checking
+    pub fn get_id(&self, index: usize) -> Option<&RecordId> {
+        if index < self.record_ids.len() {
+            Some(&self.record_ids[index])
+        } else {
+            None
+        }
     }
 }
 
