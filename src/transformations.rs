@@ -10,7 +10,7 @@ pub fn compute_linkage(
 ) -> LinkageID {
     // Check if there's any data to work with
     if client_data.share_data.is_empty() || server_data.share_data.is_empty() {
-        return LinkageID::from("ERROR: No data available for linkage");
+        return LinkageID::from("ERROR: No data available for linkage.");
     }
 
     // Compute XOR between client and server data
@@ -64,16 +64,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn compute_linkage_should() {
-        // Create test data
+    fn compute_linkage_should_handle_empty_data() {
+        // Create empty test data
         let client_data = ClientLinkageData::empty();
         let server_data = ServerLinkageData::empty();
         let client_key = EncryptionKey::new("client-key");
         let server_key = EncryptionKey::new("server-key");
-
         let encryption_strategy = "aes256";
 
-        // Call the function using references
+        // Call the function with references
         let linkage_id = compute_linkage(
             &client_data,
             &server_data,
@@ -82,7 +81,10 @@ mod tests {
             //encryption_strategy, // &str works directly
         );
 
-        // Verify result
-        assert_eq!(linkage_id, LinkageID::from("This should fail."));
+        // Verify result for empty data
+        assert_eq!(
+            linkage_id,
+            LinkageID::from("ERROR: No data available for linkage.")
+        );
     }
 }
