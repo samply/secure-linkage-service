@@ -30,21 +30,20 @@ class LinkageResult:
     def set_share(self, json_data):
         data = json_data
         if (data['role'] == 'server'):
+            print("Server Data: ", data)
             for res in data['result']:
-                print("Record: ", res)
                 self.server_matches.append(res['match'])
                 self.server_tmatches.append(res['tentativeMatch'])
                 self.server_idxs.append(res['bestIndex'])
             self.server_data = True
             self.server_ids = data['ids']
-            print("Server Matches: ", self.server_matches)
         elif (data['role'] == 'client'):
+            print("Client Data: ", data)
             for res in data['result']:
                 self.client_matches.append(res['match'])
                 self.client_tmatches.append(res['tentativeMatch'])
                 self.client_idxs.append(res['bestIndex'])
             self.client_data = True
-            print("Client Matches: ", self.client_matches)
         else:
             return make_response('Invalid role', 400)
 
