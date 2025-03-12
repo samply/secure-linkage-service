@@ -20,9 +20,8 @@ pub fn compute_linkage(
         .iter()
         .enumerate()
         .find_map(|(_i, result)| {
-            // Check if there's a match
-            if result.confirmed_match.0 != 0 || result.tentative_match.0 != 0 {
-                // With a match, use the values to build a linkage ID
+            if has_a_match(result) {
+                // Use the values to build a linkage ID
                 Some(LinkageID::from(&format!(
                     "match-{}-{}-{}",
                     result.confirmed_match.0,
@@ -30,6 +29,7 @@ pub fn compute_linkage(
                     result.index_of_best_match.0
                 )))
             } else {
+                // TODO: Create a fake random ID
                 None
             }
         })
@@ -38,6 +38,10 @@ pub fn compute_linkage(
         });
 
     linkage_id
+}
+
+fn has_a_match(rd: &ResultData) -> bool {
+    rd.confirmed_match.0 != 0 || rd.tentative_match.0 != 0
 }
 
 fn compute_xor_results(data1: &[ResultData], data2: &[ResultData]) -> Vec<ResultData> {
