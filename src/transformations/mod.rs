@@ -1,47 +1,37 @@
+pub mod crypto;
 use crate::domain::*;
+use crate::transformations::crypto::generate_linkage_ids;
+use ring::aead::UnboundKey;
+use ring::rand::SystemRandom;
 
 /// Computes linkage between client and server data using an immutable approach with references
 pub fn compute_linkage(
+    client_rand: &SystemRandom,
+    client_key: &UnboundKey,
+    server_key: &UnboundKey,
     client_data: &ClientLinkageData,
     server_data: &ServerLinkageData,
-    // client_encryption_key: &EncryptionKey,
-    // server_encryption_key: &EncryptionKey,
-    // encryption_strategy: &str,
-) -> LinkageID {
+) -> LinkageResult {
     // Check if there's any data to work with
     if client_data.share_data.is_empty() || server_data.share_data.is_empty() {
-        return LinkageID::from("ERROR: No data available for linkage.");
+        return LinkageResult(vec![Some(LinkageID::new(
+            "ERROR: No data available for linkage.",
+        ))]);
     }
 
     let xor_results = compute_xor_results(&client_data.share_data, &server_data.share_data);
 
-    // Determine linkage ID from XOR results
-    let linkage_id = xor_results
-        .iter()
-        .enumerate()
-        .find_map(|(_i, result)| {
-            if has_a_match(result) {
-                // Use the values to build a linkage ID
-                Some(LinkageID::from(&format!(
-                    "match-{}-{}-{}",
-                    result.confirmed_match.0,
-                    result.tentative_match.0,
-                    result.index_of_best_match.0
-                )))
-            } else {
-                // TODO: Create a fake random ID
-                None
-            }
-        })
-        .unwrap_or_else(|| {
-            LinkageID::from("ERROR: This is not the LinkageID you are looking for.")
-        });
+    let server_ids = server_data.ids();
 
-    linkage_id
-}
+    let linkage_ids = generate_linkage_ids(
+        &client_rand,
+        &client_key,
+        &server_key,
+        &server_ids,
+        &xor_results,
+    );
 
-fn has_a_match(rd: &ResultData) -> bool {
-    rd.confirmed_match.0 != 0 || rd.tentative_match.0 != 0
+    LinkageResult(linkage_ids)
 }
 
 fn compute_xor_results(data1: &[ResultData], data2: &[ResultData]) -> Vec<ResultData> {
@@ -70,23 +60,18 @@ mod tests {
         // Create empty test data
         let client_data = ClientLinkageData::empty();
         let server_data = ServerLinkageData::empty();
-        let client_key = EncryptionKey::new("client-key");
-        let server_key = EncryptionKey::new("server-key");
-        let encryption_strategy = "aes256";
+        let client_key = UnboundKey::new("client-key");
+        let server_key = UnboundKey::new("server-key");
 
         // Call the function with references
-        let linkage_id = compute_linkage(
-            &client_data,
-            &server_data,
-            //&client_key,
-            //&server_key,
-            //encryption_strategy, // &str works directly
-        );
+        let linkage_id = compute_linkage(&client_data, &server_data, &client_key, &server_key);
 
         // Verify result for empty data
         assert_eq!(
             linkage_id,
-            LinkageID::from("ERROR: No data available for linkage.")
+            LinkageResult(vec![Some(LinkageID::from(
+                "ERROR: No data available for linkage."
+            ))])
         );
     }
 
@@ -138,25 +123,20 @@ mod tests {
         );
 
         // Setup encryption keys
-        let client_key = EncryptionKey::new("client-secret-key");
-        let server_key = EncryptionKey::new("server-secret-key");
-        let encryption_strategy = "aes256";
+        let client_key = UnboundKey::new("client-secret-key");
+        let server_key = UnboundKey::new("server-secret-key");
 
         // Call the function
-        let linkage_id = compute_linkage(
-            &client_data,
-            &server_data,
-            // &client_key,
-            // &server_key,
-            // encryption_strategy,
-        );
+        let linkage_id = compute_linkage(&client_data, &server_data, &client_key, &server_key);
 
         // This assertion will fail, since we haven't implemented the proper logic yet.
         // The expected value should represent what a correct implementation would return
         // based on the XOR operations between client and server data.
         assert_eq!(
             linkage_id,
-            LinkageID::from("match-1-1-0"), // Expected format: "match-{confirmed}-{tentative}-{index}"
+            LinkageResult(vec![Some(
+                LinkageID::from("match-1-1-0"), // Expected format: "match-{confirmed}-{tentative}-{index}"
+            )])
         );
     }
 }

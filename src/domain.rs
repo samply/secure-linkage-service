@@ -37,19 +37,6 @@ impl RecordId {
 }
 
 //
-// Encryption related types
-//
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EncryptionKey(pub Base64EncodedString);
-
-impl EncryptionKey {
-    pub fn new(value: &str) -> Self {
-        Self(Base64EncodedString::new(value))
-    }
-}
-
-//
 // Result data structures
 //
 
@@ -60,6 +47,7 @@ pub struct ResultData {
     pub index_of_best_match: IndexOfBestMatch,
 }
 
+// TODO: maybe delete this `new` function?
 impl ResultData {
     pub fn new(
         confirmed_match: ConfirmedMatchBit,
@@ -171,14 +159,8 @@ impl LinkageID {
     pub fn new(value: &str) -> Self {
         Self(Base64EncodedString::new(value))
     }
-
-    // Added to support the dummy implementation
-    pub fn from(value: &str) -> Self {
-        Self::new(value)
-    }
 }
 
-// Linkage status enums
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LinkageStatus {
     Pending,
@@ -186,58 +168,5 @@ pub enum LinkageStatus {
     Failed,
 }
 
-// Result of a linkage operation
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LinkageResult {
-    pub status: LinkageStatus,
-    pub client_data: Option<ClientLinkageData>,
-    pub server_data: Option<ServerLinkageData>,
-    pub linkage_id: LinkageID,
-}
-
-impl LinkageResult {
-    pub fn new(
-        status: LinkageStatus,
-        client_data: Option<ClientLinkageData>,
-        server_data: Option<ServerLinkageData>,
-        linkage_id: LinkageID,
-    ) -> Self {
-        Self {
-            status,
-            client_data,
-            server_data,
-            linkage_id,
-        }
-    }
-
-    pub fn pending(linkage_id: LinkageID) -> Self {
-        Self {
-            status: LinkageStatus::Pending,
-            client_data: None,
-            server_data: None,
-            linkage_id,
-        }
-    }
-
-    pub fn complete(
-        client_data: ClientLinkageData,
-        server_data: ServerLinkageData,
-        linkage_id: LinkageID,
-    ) -> Self {
-        Self {
-            status: LinkageStatus::Complete,
-            client_data: Some(client_data),
-            server_data: Some(server_data),
-            linkage_id,
-        }
-    }
-
-    pub fn failed(linkage_id: LinkageID) -> Self {
-        Self {
-            status: LinkageStatus::Failed,
-            client_data: None,
-            server_data: None,
-            linkage_id,
-        }
-    }
-}
+pub struct LinkageResult(pub Vec<Option<LinkageID>>);
