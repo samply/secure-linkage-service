@@ -13,26 +13,7 @@ pub fn compute_linkage(
         return LinkageID::from("ERROR: No data available for linkage.");
     }
 
-    // Compute XOR between client and server data
-    let xor_results: Vec<ResultData> = client_data
-        .share_data
-        .iter()
-        .zip(server_data.share_data.iter())
-        .map(|(client, server)| {
-            // Perform the XOR operations directly on the u64 values
-            ResultData {
-                confirmed_match: ConfirmedMatchBit(
-                    client.confirmed_match.0 ^ server.confirmed_match.0,
-                ),
-                tentative_match: TentativeMatchBit(
-                    client.tentative_match.0 ^ server.tentative_match.0,
-                ),
-                index_of_best_match: IndexOfBestMatch(
-                    client.index_of_best_match.0 ^ server.index_of_best_match.0,
-                ),
-            }
-        })
-        .collect();
+    let xor_results = compute_xor_results(&client_data.share_data, &server_data.share_data);
 
     // Determine linkage ID from XOR results
     let linkage_id = xor_results
@@ -57,6 +38,23 @@ pub fn compute_linkage(
         });
 
     linkage_id
+}
+
+fn compute_xor_results(data1: &[ResultData], data2: &[ResultData]) -> Vec<ResultData> {
+    data1
+        .iter()
+        .zip(data2.iter())
+        .map(|(d1, d2)| {
+            // Perform the XOR operations directly on the u64 values
+            ResultData {
+                confirmed_match: ConfirmedMatchBit(d1.confirmed_match.0 ^ d2.confirmed_match.0),
+                tentative_match: TentativeMatchBit(d1.tentative_match.0 ^ d2.tentative_match.0),
+                index_of_best_match: IndexOfBestMatch(
+                    d1.index_of_best_match.0 ^ d2.index_of_best_match.0,
+                ),
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]
