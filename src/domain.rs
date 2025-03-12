@@ -1,3 +1,4 @@
+use std::fmt;
 use std::rc::Rc;
 
 //
@@ -87,6 +88,16 @@ impl ResultData {
             tentative_match: TentativeMatchBit(0),
             index_of_best_match: IndexOfBestMatch(0),
         }
+    }
+}
+
+impl fmt::Display for ResultData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "match-{}-{}-{}",
+            self.confirmed_match.0, self.tentative_match.0, self.index_of_best_match.0
+        )
     }
 }
 
