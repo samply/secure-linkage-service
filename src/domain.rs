@@ -25,6 +25,10 @@ impl Base64EncodedString {
     pub fn new(value: &str) -> Self {
         Self(Rc::from(value))
     }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -36,6 +40,17 @@ impl RecordId {
     }
 }
 
+impl AsRef<[u8]> for RecordId {
+    fn as_ref(&self) -> &[u8] {
+        self.0.0.as_bytes()
+    }
+}
+
+impl fmt::Display for RecordId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0.0)
+    }
+}
 //
 // Result data structures
 //

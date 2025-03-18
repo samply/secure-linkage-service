@@ -7,8 +7,8 @@ use ring::rand::SystemRandom;
 /// Computes linkage between client and server data using an immutable approach with references
 pub fn compute_linkage(
     client_rand: &SystemRandom,
-    client_key: &UnboundKey,
-    server_key: &UnboundKey,
+    client_key: UnboundKey,
+    server_key: UnboundKey,
     client_data: &ClientLinkageData,
     server_data: &ServerLinkageData,
 ) -> LinkageResult {
@@ -25,8 +25,8 @@ pub fn compute_linkage(
 
     let linkage_ids = generate_linkage_ids(
         &client_rand,
-        &client_key,
-        &server_key,
+        client_key,
+        server_key,
         &server_ids,
         &xor_results,
     );
