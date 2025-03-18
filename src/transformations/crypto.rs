@@ -40,6 +40,7 @@ pub fn generate_linkage_ids(
                 server_ids,
                 result,
             ))
+            .and_then(|r| r.ok())
         })
         .collect()
 }
@@ -67,7 +68,7 @@ pub fn generate_linkage_id(
     server_key: &UnboundKey,
     server_ids: &[RecordId],
     xor_result: &ResultData,
-) -> LinkageID {
+) -> Result<LinkageID, ring::error::Unspecified> {
     if has_a_match(xor_result) {
         return create_match_linkage_id(
             id_counter,
@@ -90,13 +91,50 @@ pub fn generate_linkage_id(
 /// Returns None if the record ID couldn't be found or processed
 fn create_match_linkage_id(
     id_counter: &usize,
-    client_key: &UnboundKey,
+    client_key: UnboundKey,
     client_rand: &SystemRandom,
-    server_key: &UnboundKey,
+    server_key: UnboundKey,
     server_ids: &[RecordId],
     xor_result: &ResultData,
-) -> LinkageID {
+) -> Result<LinkageID, ring::error::Unspecified> {
     // TODO: Implement this!
+}
+
+/// Generates a random nonce for use with AEAD encryption
+///
+/// Returns both the raw nonce bytes and the Ring library Nonce object
+fn generate_nonce(
+    random_source: &SystemRandom,
+) -> Result<([u8; NONCE_LEN], Nonce), ring::error::Unspecified> {
+    let mut nonce_bytes = [0u8; NONCE_LEN];
+    random_source.fill(&mut nonce_bytes)?;
+    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
+    Ok((nonce_bytes, nonce))
+}
+
+/// Converts a counter value into a byte representation suitable for encryption
+fn prepare_payload(counter: &usize) -> Vec<u8> {
+    Vec::from(counter.to_le_bytes())
+}
+
+/// Encrypts a payload using ChaCha20-Poly1305 with the provided key, nonce, and AAD
+///
+/// Returns the encrypted payload with authentication tag appended
+fn encrypt_payload(
+    key: &LessSafeKey,
+    nonce: Nonce,
+    aad: Aad<[u8; NONCE_LEN]>,
+    mut payload: Vec<u8>,
+) -> Result<Vec<u8>, ring::error::Unspecified> {
+    key.seal_in_place_append_tag(nonce, aad, &mut payload)?;
+    Ok(payload)
+}
+
+fn combine_nonce_and_payload(nonce_bytes: &[u8], encrypted_payload: &[u8]) -> Vec<u8> {
+    let mut combined = Vec::with_capacity(nonce_bytes.len() + encrypted_payload.len());
+    combined.extend_from_slice(nonce_bytes);
+    combined.extend_from_slice(encrypted_payload);
+    combined
 }
 
 /// Generate a cryptographically secure random linkage ID
@@ -104,19 +142,17 @@ fn generate_random_linkage_id(
     client_rand: &SystemRandom,
     secret_key: LessSafeKey,
     id_counter: &usize,
-) -> LinkageID {
-    let mut nonce_bytes = [0u8; NONCE_LEN];
-    client_rand
-        .fill(&mut nonce_bytes)
-        .expect("CANNOT CREATE NONCE");
-    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
-    let mut payload = Vec::from(id_counter.to_le_bytes());
+) -> Result<LinkageID, ring::error::Unspecified> {
+    let (nonce_bytes, nonce) = generate_nonce(client_rand)?;
+
+    let payload = prepare_payload(id_counter);
+
     let aad = Aad::from(nonce_bytes);
-    secret_key
-        .seal_in_place_append_tag(nonce, aad, &mut payload)
-        .expect("CANNOT ENCRYPT ID");
-    // Prepend the nonce (i.e. aad)
-    let mut combined: Vec<u8> = nonce_bytes.to_vec();
-    combined.extend(&payload);
-    LinkageID::new(&BASE64_STANDARD.encode(&combined))
+    let encrypted_payload = encrypt_payload(&secret_key, nonce, aad, payload)?;
+
+    let combined = combine_nonce_and_payload(&nonce_bytes, &encrypted_payload);
+
+    let encoded = BASE64_STANDARD.encode(&combined);
+
+    Ok(LinkageID::new(&encoded))
 }
