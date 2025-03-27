@@ -1,14 +1,14 @@
 pub mod crypto;
 use crate::domain::*;
 use crate::transformations::crypto::generate_linkage_ids;
-use ring::aead::UnboundKey;
+use ring::aead::LessSafeKey;
 use ring::rand::SystemRandom;
 
 /// Computes linkage between client and server data using an immutable approach with references
 pub fn compute_linkage(
     client_rand: &SystemRandom,
-    client_key: UnboundKey,
-    server_key: UnboundKey,
+    client_key: &LessSafeKey,
+    server_key: &LessSafeKey,
     client_data: &ClientLinkageData,
     server_data: &ServerLinkageData,
 ) -> LinkageResult {
@@ -25,8 +25,8 @@ pub fn compute_linkage(
 
     let linkage_ids = generate_linkage_ids(
         &client_rand,
-        client_key,
-        server_key,
+        &client_key,
+        &server_key,
         &server_ids,
         &xor_results,
     );
@@ -54,22 +54,40 @@ fn compute_xor_results(data1: &[ResultData], data2: &[ResultData]) -> Vec<Result
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ring::aead::CHACHA20_POLY1305;
+    use ring::aead::UnboundKey;
 
     #[test]
     fn compute_linkage_should_handle_empty_data() {
-        // Create empty test data
+        let rand = SystemRandom::new();
         let client_data = ClientLinkageData::empty();
         let server_data = ServerLinkageData::empty();
-        let client_key = UnboundKey::new("client-key");
-        let server_key = UnboundKey::new("server-key");
+
+        let server_key_material: Vec<u8> = vec![
+            0x42, 0x39, 0x8f, 0xd5, 0xe1, 0xae, 0x41, 0x7c, 0x6a, 0x9a, 0xbb, 0x8e, 0x33, 0x94,
+            0x9b, 0xc7, 0xe0, 0x73, 0x70, 0x7c, 0xae, 0x21, 0x0d, 0x30, 0xee, 0xea, 0x87, 0xe3,
+            0x09, 0x7f, 0x1d, 0x08,
+        ];
+        let client_key_material: Vec<u8> = vec![
+            0xd9, 0xee, 0x72, 0x53, 0x10, 0xe9, 0x83, 0x56, 0x1b, 0x04, 0x47, 0xbc, 0x0f, 0x5c,
+            0xff, 0xc5, 0x71, 0x61, 0xc3, 0x3f, 0x3a, 0x64, 0x05, 0x15, 0x68, 0xe2, 0x4f, 0xc3,
+            0xfc, 0x8a, 0x5d, 0x18,
+        ];
+        let unbound_client_key =
+            UnboundKey::new(&CHACHA20_POLY1305, &client_key_material.as_slice()).unwrap();
+        let client_key = LessSafeKey::new(unbound_client_key);
+        let unbound_server_key =
+            UnboundKey::new(&CHACHA20_POLY1305, server_key_material.as_slice()).unwrap();
+        let server_key = LessSafeKey::new(unbound_server_key);
 
         // Call the function with references
-        let linkage_id = compute_linkage(&client_data, &server_data, &client_key, &server_key);
+        let linkage_id =
+            compute_linkage(&rand, &client_key, &server_key, &client_data, &server_data);
 
         // Verify result for empty data
         assert_eq!(
             linkage_id,
-            LinkageResult(vec![Some(LinkageID::from(
+            LinkageResult(vec![Some(LinkageID::new(
                 "ERROR: No data available for linkage."
             ))])
         );
@@ -77,6 +95,7 @@ mod tests {
 
     #[test]
     fn compute_linkage_should_generate_linkage_id_from_matching_data() {
+        let rand = SystemRandom::new();
         // Exactly the same client data from the E2E test from the Python implementation
         let client_data = ClientLinkageData::new(vec![
             ResultData::new(
@@ -123,11 +142,26 @@ mod tests {
         );
 
         // Setup encryption keys
-        let client_key = UnboundKey::new("client-secret-key");
-        let server_key = UnboundKey::new("server-secret-key");
+        let server_key_material: Vec<u8> = vec![
+            0x42, 0x39, 0x8f, 0xd5, 0xe1, 0xae, 0x41, 0x7c, 0x6a, 0x9a, 0xbb, 0x8e, 0x33, 0x94,
+            0x9b, 0xc7, 0xe0, 0x73, 0x70, 0x7c, 0xae, 0x21, 0x0d, 0x30, 0xee, 0xea, 0x87, 0xe3,
+            0x09, 0x7f, 0x1d, 0x08,
+        ]; //sha265("server_key")
+        let client_key_material: Vec<u8> = vec![
+            0xd9, 0xee, 0x72, 0x53, 0x10, 0xe9, 0x83, 0x56, 0x1b, 0x04, 0x47, 0xbc, 0x0f, 0x5c,
+            0xff, 0xc5, 0x71, 0x61, 0xc3, 0x3f, 0x3a, 0x64, 0x05, 0x15, 0x68, 0xe2, 0x4f, 0xc3,
+            0xfc, 0x8a, 0x5d, 0x18,
+        ]; //sha265("client_key")
+        let client_key = LessSafeKey::new(
+            UnboundKey::new(&CHACHA20_POLY1305, &client_key_material.as_slice()).unwrap(),
+        );
+        let server_key = LessSafeKey::new(
+            UnboundKey::new(&CHACHA20_POLY1305, server_key_material.as_slice()).unwrap(),
+        );
 
         // Call the function
-        let linkage_id = compute_linkage(&client_data, &server_data, &client_key, &server_key);
+        let linkage_id =
+            compute_linkage(&rand, &client_key, &server_key, &client_data, &server_data);
 
         // This assertion will fail, since we haven't implemented the proper logic yet.
         // The expected value should represent what a correct implementation would return
@@ -135,7 +169,7 @@ mod tests {
         assert_eq!(
             linkage_id,
             LinkageResult(vec![Some(
-                LinkageID::from("match-1-1-0"), // Expected format: "match-{confirmed}-{tentative}-{index}"
+                LinkageID::new("match-1-1-0"), // Expected format: "match-{confirmed}-{tentative}-{index}"
             )])
         );
     }
