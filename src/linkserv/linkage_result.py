@@ -5,24 +5,18 @@ import simplejson as json
 class LinkageResult:
     def __init__(self, client, server):
         self.client = client
-        self.client_matches = []
-        self.client_tmatches = []
-        self.client_idxs = []
         self.server = server
-        self.server_matches = []
-        self.server_tmatches = []
-        self.server_idxs = []
-        self.client_data = False
-        self.server_data = False
-        self.server_ids = []
+        self.reset();
 
     def reset(self):
         self.client_data = False
         self.server_data = False
         self.server_ids = []
+
         self.client_matches = []
         self.client_tmatches = []
         self.client_idxs = []
+
         self.server_matches = []
         self.server_tmatches = []
         self.server_idxs = []
@@ -64,22 +58,20 @@ class LinkageResult:
         Returns:
             JSON string containing the linkage result
         """
-        # Extract data from parameters
-        client_matches = []
-        client_tmatches = []
-        client_idxs = []
+        # Extract server data
         server_matches = []
         server_tmatches = []
         server_idxs = []
-        server_ids = server_data['ids']
-
-        # Extract server data
         for res in server_data['result']:
             server_matches.append(res['match'])
             server_tmatches.append(res['tentativeMatch'])
             server_idxs.append(res['bestIndex'])
+        server_ids = server_data['ids']
 
         # Extract client data
+        client_matches = []
+        client_tmatches = []
+        client_idxs = []
         for res in client_data['result']:
             client_matches.append(res['match'])
             client_tmatches.append(res['tentativeMatch'])
