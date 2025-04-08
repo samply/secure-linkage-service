@@ -105,7 +105,7 @@ class LinkageResult:
                     bytes(tmatch) +
                     server.decrypt(
                         server_ids[bestind],
-                        False))
+                        False), True)
                 # Output is differently formated,
                 # based on one or multiple results.
                 # (1:n linkage or n:m linkage)
