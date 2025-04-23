@@ -11,12 +11,10 @@ pub fn compute_linkage(
     server_key: &LessSafeKey,
     client_data: &ClientLinkageData,
     server_data: &ServerLinkageData,
-) -> LinkageResult {
+) -> Result<LinkageResult, LinkageError> {
     // Check if there's any data to work with
     if client_data.share_data.is_empty() || server_data.share_data.is_empty() {
-        return LinkageResult(vec![Some(LinkageID::new(
-            "ERROR: No data available for linkage.",
-        ))]);
+        return Err(LinkageError::EmptyInput);
     }
 
     let xor_results = compute_xor_results(&client_data.share_data, &server_data.share_data);
@@ -29,9 +27,9 @@ pub fn compute_linkage(
         &server_key,
         &server_ids,
         &xor_results,
-    );
+    )?;
 
-    LinkageResult(linkage_ids)
+    Ok(LinkageResult(linkage_ids))
 }
 
 fn compute_xor_results(data1: &[ResultData], data2: &[ResultData]) -> Vec<ResultData> {
@@ -60,33 +58,25 @@ mod tests {
     use ring::rand::SystemRandom;
 
     #[test]
-    fn compute_linkage_should_handle_empty_data() {
+    fn compute_linkage_should_handle_empty_input() {
         let rand = SystemRandom::new();
         let client_data = ClientLinkageData::empty();
         let server_data = ServerLinkageData::empty();
 
-        let server_key = generate_key(generate_random_key_material(&rand));
-        let client_key = generate_key(generate_random_key_material(&rand));
+        let server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
+        let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
-        // Call the function with references
-        let linkage_id =
-            compute_linkage(&rand, &client_key, &server_key, &client_data, &server_data);
+        let result = compute_linkage(&rand, &client_key, &server_key, &client_data, &server_data);
 
-        // Verify result for empty data
-        assert_eq!(
-            linkage_id,
-            LinkageResult(vec![Some(LinkageID::new(
-                "ERROR: No data available for linkage."
-            ))])
-        );
+        assert!(matches!(result, Err(LinkageError::EmptyInput)));
     }
 
     #[test]
     fn compute_linkage_should_compute_linkage_id_when_match_and_no_match() {
         let rand = SystemRandom::new();
 
-        let server_key = generate_key(generate_random_key_material(&rand));
-        let client_key = generate_key(generate_random_key_material(&rand));
+        let server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
+        let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
         // Create test data with the same key
         let plaintexts = [
@@ -102,7 +92,7 @@ mod tests {
                 let mut data = plaintext.clone();
                 server_key
                     .seal_in_place_append_tag(nonce, Aad::from(nonce_bytes), &mut data)
-                    .unwrap();
+                    .expect("Encryption should succeed");
                 let mut combined = Vec::new();
                 combined.extend_from_slice(&nonce_bytes);
                 combined.extend_from_slice(&data);
@@ -158,7 +148,8 @@ mod tests {
         );
 
         let linkage_result =
-            compute_linkage(&rand, &client_key, &server_key, &client_data, &server_data);
+            compute_linkage(&rand, &client_key, &server_key, &client_data, &server_data)
+                .expect("Should succeed");
 
         // Verify we have exactly 3 results
         assert_eq!(linkage_result.0.len(), 3);
@@ -197,16 +188,16 @@ mod tests {
         let rand = SystemRandom::new();
 
         // Generate three different keys
-        let real_server_key = generate_key(generate_random_key_material(&rand));
-        let wrong_server_key = generate_key(generate_random_key_material(&rand));
-        let client_key = generate_key(generate_random_key_material(&rand));
+        let real_server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
+        let wrong_server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
+        let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
         // Server encrypts with REAL key
         let (nonce_bytes, nonce) = generate_random_nonce(&rand).unwrap();
         let mut encrypted = b"test_data".to_vec();
         real_server_key
             .seal_in_place_append_tag(nonce, Aad::from(nonce_bytes), &mut encrypted)
-            .unwrap();
+            .expect("Encryption should succeed");
 
         // Package
         let mut combined = Vec::new();
@@ -234,10 +225,9 @@ mod tests {
             ),
         );
 
-        // Should fail with decryption error
-        match &linkage_result.0[0] {
-            Some(id) => assert!(id.0 .0.contains("ERROR: Decryption failed")),
-            None => panic!("Expected error message"),
-        }
+        assert!(matches!(
+            linkage_result,
+            Err(LinkageError::DecryptionFailed(_))
+        ));
     }
 }

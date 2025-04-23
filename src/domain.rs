@@ -185,3 +185,33 @@ pub enum LinkageStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinkageResult(pub Vec<Option<LinkageID>>);
+
+//
+// Error handling
+//
+
+#[derive(Debug, thiserror::Error)]
+pub enum LinkageError {
+    #[error("Decryption failed: {0}")]
+    DecryptionFailed(String),
+    #[error("Invalid base64 encoding")]
+    Base64Error,
+    #[error("No input data for linkage")]
+    EmptyInput,
+    #[error("Cannot create random key material")]
+    CannotCreateRandomKeyMaterial,
+    #[error("Cannot create LessSafeKey")]
+    CannotCreateLessSafeKey,
+    #[error("Invalid nonce size")]
+    InvalidNonceSize,
+    #[error("Cannot not generate Nonce")]
+    CannotGenerateNonce,
+    #[error("Cannot encrypt payload")]
+    CannotEncryptPayload,
+    #[error("Decoded ID too short")]
+    DecodedIdTooShort,
+    #[error("Invalid base64 encoding")]
+    InvalidBase64Encoding,
+    #[error("ServerID not found for best match index")]
+    ServerIDNotFoundForBestMatchIndex,
+}

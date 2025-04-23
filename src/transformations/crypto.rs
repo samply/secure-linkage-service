@@ -17,11 +17,9 @@ pub fn generate_linkage_ids(
     server_key: &LessSafeKey,
     server_ids: &[RecordId],
     xor_results: &[ResultData],
-) -> Vec<Option<LinkageID>> {
+) -> Result<Vec<Option<LinkageID>>, LinkageError> {
     if xor_results.is_empty() {
-        return vec![Some(LinkageID::new(&format!(
-            "ERROR: XOR Results is empty."
-        )))];
+        return Err(LinkageError::EmptyInput);
     }
 
     // Invoking generate_linkage_id as if in:
@@ -32,15 +30,15 @@ pub fn generate_linkage_ids(
         .iter()
         .enumerate() // adds the counter, starting from 0.
         .map(|(counter, xor_result)| {
-            Some(generate_linkage_id(
-                &(counter as usize),
-                &client_rand,
-                &client_key,
-                &server_key,
-                &server_ids,
-                &xor_result,
-            ))
-            .and_then(|r| r.ok())
+            generate_linkage_id(
+                &counter,
+                client_rand,
+                client_key,
+                server_key,
+                server_ids,
+                xor_result,
+            )
+            .map(Some)
         })
         .collect()
 }
@@ -51,17 +49,17 @@ impl ResultData {
     }
 }
 
-pub fn generate_random_key_material(rand: &SystemRandom) -> [u8; 32] {
+pub fn generate_random_key_material(rand: &SystemRandom) -> Result<[u8; 32], LinkageError> {
     let mut key_material = [0 as u8; 32];
     rand.fill(&mut key_material)
-        .expect("ERROR: Cannot create random key material");
-    key_material
+        .map_err(|_| LinkageError::CannotCreateRandomKeyMaterial)?;
+    Ok(key_material)
 }
 
-pub fn generate_key(key_material: [u8; 32]) -> LessSafeKey {
-    LessSafeKey::new(
-        UnboundKey::new(&CHACHA20_POLY1305, &key_material).expect("ERROR: Cannot create key"),
-    )
+pub fn generate_key(key_material: [u8; 32]) -> Result<LessSafeKey, LinkageError> {
+    let unbound_key = UnboundKey::new(&CHACHA20_POLY1305, &key_material)
+        .map_err(|_| LinkageError::CannotCreateLessSafeKey)?;
+    Ok(LessSafeKey::new(unbound_key))
 }
 
 pub fn generate_linkage_id(
@@ -71,21 +69,13 @@ pub fn generate_linkage_id(
     server_key: &LessSafeKey,
     server_ids: &[RecordId],
     xor_result: &ResultData,
-) -> Result<LinkageID, ring::error::Unspecified> {
+) -> Result<LinkageID, LinkageError> {
     if xor_result.has_a_match() {
-        create_match_linkage_id(
-            &client_rand,
-            &client_key,
-            &server_key,
-            &server_ids,
-            &xor_result,
-        )
+        create_match_linkage_id(client_rand, client_key, server_key, server_ids, xor_result)
     } else {
-        generate_random_linkage_id(
-            &client_rand,
-            &generate_key(generate_random_key_material(client_rand)),
-            &id_counter,
-        )
+        let key_material = generate_random_key_material(client_rand)?;
+        let random_key = generate_key(key_material)?;
+        generate_random_linkage_id(client_rand, &random_key, id_counter)
     }
 }
 /// Generates a random nonce for use with AEAD encryption
@@ -93,9 +83,11 @@ pub fn generate_linkage_id(
 /// Returns both the raw nonce bytes and the Ring library Nonce object
 pub fn generate_random_nonce(
     random_source: &SystemRandom,
-) -> Result<([u8; NONCE_LEN], Nonce), ring::error::Unspecified> {
+) -> Result<([u8; NONCE_LEN], Nonce), LinkageError> {
     let mut nonce_bytes = [0u8; NONCE_LEN];
-    random_source.fill(&mut nonce_bytes)?;
+    random_source
+        .fill(&mut nonce_bytes)
+        .map_err(|_| LinkageError::CannotGenerateNonce)?;
     let nonce = Nonce::assume_unique_for_key(nonce_bytes);
     Ok((nonce_bytes, nonce))
 }
@@ -113,8 +105,9 @@ fn encrypt_payload(
     nonce: Nonce,
     aad: Aad<[u8; NONCE_LEN]>,
     mut payload: Vec<u8>,
-) -> Result<Vec<u8>, ring::error::Unspecified> {
-    key.seal_in_place_append_tag(nonce, aad, &mut payload)?;
+) -> Result<Vec<u8>, LinkageError> {
+    key.seal_in_place_append_tag(nonce, aad, &mut payload)
+        .map_err(|_| LinkageError::CannotEncryptPayload)?;
     Ok(payload)
 }
 
@@ -133,27 +126,23 @@ fn create_match_linkage_id(
     server_key: &LessSafeKey,
     server_ids: &[RecordId],
     xor_result: &ResultData,
-) -> Result<LinkageID, ring::error::Unspecified> {
+) -> Result<LinkageID, LinkageError> {
     // Step 1: get the server_ID[bestIndex]
     let best_index = xor_result.index_of_best_match.0 as usize;
     let encrypted_id_from_server = match server_ids.get(best_index) {
         Some(id) => id,
-        None => {
-            return Ok(LinkageID::new(
-                "ERROR: Server ID not found for best match index",
-            ))
-        }
+        None => return Err(LinkageError::ServerIDNotFoundForBestMatchIndex),
     };
 
     // Step 2: Decode the base64 string to bytes
     let decoded_bytes = match BASE64_STANDARD.decode(encrypted_id_from_server.0.as_bytes()) {
         Ok(bytes) => bytes,
-        Err(_) => return Ok(LinkageID::new("ERROR: Invalid base64 encoding")),
+        Err(_) => return Err(LinkageError::InvalidBase64Encoding),
     };
 
     // Validate length before splitting (nonce + encrypted data)
     if decoded_bytes.len() < NONCE_LEN {
-        return Ok(LinkageID::new("ERROR: Decoded ID too short"));
+        return Err(LinkageError::DecodedIdTooShort);
     }
 
     // Step 3: Decrypt the server ID (with the server key)
@@ -164,7 +153,7 @@ fn create_match_linkage_id(
     // 3.2 Convert nonce to fixed-size array
     let nonce_bytes: [u8; NONCE_LEN] = match nonce_bytes.try_into() {
         Ok(arr) => arr,
-        Err(_) => return Ok(LinkageID::new("ERROR: Invalid nonce size")),
+        Err(_) => return Err(LinkageError::InvalidNonceSize),
     };
 
     let nonce = Nonce::assume_unique_for_key(nonce_bytes);
@@ -178,10 +167,7 @@ fn create_match_linkage_id(
             println!("Decryption failed: {:?}", e);
             println!("Nonce bytes: {:?}", nonce_bytes);
             println!("Ciphertext length: {}", ciphertext.len());
-            return Ok(LinkageID::new(&format!(
-                "ERROR: Decryption failed: {:?}",
-                e
-            )));
+            return Err(LinkageError::DecryptionFailed(e.to_string()));
         }
     };
 
@@ -208,7 +194,7 @@ fn generate_random_linkage_id(
     client_rand: &SystemRandom,
     secret_key: &LessSafeKey,
     id_counter: &usize,
-) -> Result<LinkageID, ring::error::Unspecified> {
+) -> Result<LinkageID, LinkageError> {
     let (random_nonce_bytes, nonce) = generate_random_nonce(client_rand)?;
 
     let payload = generate_payload_from(id_counter);
