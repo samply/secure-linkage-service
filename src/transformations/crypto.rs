@@ -45,8 +45,10 @@ pub fn generate_linkage_ids(
         .collect()
 }
 
-fn has_a_match(rd: &ResultData) -> bool {
-    rd.confirmed_match.0 != 0 || rd.tentative_match.0 != 0
+impl ResultData {
+    pub fn has_a_match(&self) -> bool {
+        self.confirmed_match.0 != 0 || self.tentative_match.0 != 0
+    }
 }
 
 pub fn generate_random_key_material(rand: &SystemRandom) -> [u8; 32] {
@@ -70,7 +72,7 @@ pub fn generate_linkage_id(
     server_ids: &[RecordId],
     xor_result: &ResultData,
 ) -> Result<LinkageID, ring::error::Unspecified> {
-    if has_a_match(xor_result) {
+    if xor_result.has_a_match() {
         create_match_linkage_id(
             &client_rand,
             &client_key,
