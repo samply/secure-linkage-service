@@ -42,13 +42,13 @@ impl RecordId {
 
 impl AsRef<[u8]> for RecordId {
     fn as_ref(&self) -> &[u8] {
-        self.0.0.as_bytes()
+        self.0 .0.as_bytes()
     }
 }
 
 impl fmt::Display for RecordId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0.0)
+        write!(f, "{}", self.0 .0)
     }
 }
 //
