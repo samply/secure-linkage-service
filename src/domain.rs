@@ -70,8 +70,8 @@ impl ResultData {
         index_of_best_match: IndexOfBestMatch,
     ) -> Self {
         Self {
-            tentative_match,
             confirmed_match,
+            tentative_match,
             index_of_best_match,
         }
     }
