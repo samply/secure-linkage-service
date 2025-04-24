@@ -155,11 +155,7 @@ impl ServerLinkageData {
 
     // Helper to get record ID at a specific index, with bounds checking
     pub fn get_id(&self, index: usize) -> Option<&RecordId> {
-        if index < self.record_ids.len() {
-            Some(&self.record_ids[index])
-        } else {
-            None
-        }
+        self.record_ids.get(index)
     }
 }
 
