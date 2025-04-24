@@ -1,4 +1,5 @@
-use base64::DecodeError;
+use base64::prelude::BASE64_STANDARD;
+use base64::{DecodeError, Engine};
 use std::fmt;
 use std::num::ParseIntError;
 use std::rc::Rc;
@@ -50,8 +51,9 @@ pub struct IndexOfBestMatch(pub u64);
 pub struct Base64EncodedString(pub Rc<str>);
 
 impl Base64EncodedString {
-    pub fn new(value: &str) -> Self {
-        Self(Rc::from(value))
+    pub fn new(value: &str) -> Result<Self, LinkageError> {
+        BASE64_STANDARD.decode(value)?;
+        Ok(Self(Rc::from(value)))
     }
 
     pub fn as_bytes(&self) -> &[u8] {
@@ -63,8 +65,8 @@ impl Base64EncodedString {
 pub struct RecordId(pub Base64EncodedString);
 
 impl RecordId {
-    pub fn new(value: &str) -> Self {
-        Self(Base64EncodedString::new(value))
+    pub fn new(value: &str) -> Result<Self, LinkageError> {
+        Ok(Self(Base64EncodedString::new(value)?))
     }
 }
 
@@ -205,8 +207,8 @@ impl ServerLinkageData {
 pub struct LinkageID(pub Base64EncodedString);
 
 impl LinkageID {
-    pub fn new(value: &str) -> Self {
-        Self(Base64EncodedString::new(value))
+    pub fn new(value: &str) -> Result<Self, LinkageError> {
+        Ok(Self(Base64EncodedString::new(value)?))
     }
 }
 

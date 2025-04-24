@@ -96,7 +96,7 @@ mod tests {
                 let mut combined = Vec::new();
                 combined.extend_from_slice(&nonce_bytes);
                 combined.extend_from_slice(&data);
-                RecordId::new(&BASE64_STANDARD.encode(&combined))
+                RecordId::new(&BASE64_STANDARD.encode(&combined)).unwrap()
             })
             .collect();
 
@@ -203,8 +203,7 @@ mod tests {
         let mut combined = Vec::new();
         combined.extend_from_slice(&nonce_bytes);
         combined.extend_from_slice(&encrypted);
-        let server_id = RecordId::new(&BASE64_STANDARD.encode(&combined));
-
+        let server_id = RecordId::new(&BASE64_STANDARD.encode(&combined)).unwrap();
         // Test setup - client has WRONG server key
         let linkage_result = compute_linkage(
             &rand,

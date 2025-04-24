@@ -177,7 +177,7 @@ fn create_match_linkage_id(
     // Step 4: Encode again to Base64
     let encoded = BASE64_STANDARD.encode(&combined);
 
-    Ok(LinkageID::new(&encoded))
+    Ok(LinkageID::new(&encoded).unwrap())
 }
 
 /// Generate a cryptographically secure random linkage ID
@@ -198,5 +198,5 @@ fn generate_random_linkage_id(
 
     let encoded = BASE64_STANDARD.encode(&combined);
 
-    Ok(LinkageID::new(&encoded))
+    Ok(LinkageID::new(&encoded).unwrap())
 }
