@@ -31,7 +31,7 @@ pub fn generate_linkage_ids(
         .enumerate() // adds the counter, starting from 0.
         .map(|(counter, xor_result)| {
             generate_linkage_id(
-                &counter,
+                counter,
                 client_rand,
                 client_key,
                 server_key,
@@ -57,7 +57,7 @@ pub fn generate_key(key_material: [u8; 32]) -> Result<LessSafeKey, LinkageError>
 }
 
 pub fn generate_linkage_id(
-    id_counter: &usize,
+    id_counter: usize,
     client_rand: &SystemRandom,
     client_key: &LessSafeKey,
     server_key: &LessSafeKey,
@@ -87,7 +87,7 @@ pub fn generate_random_nonce(
 }
 
 /// Converts a counter value into a byte representation suitable for encryption
-fn generate_payload_from(counter: &usize) -> Vec<u8> {
+fn generate_payload_from(counter: usize) -> Vec<u8> {
     Vec::from(counter.to_le_bytes())
 }
 
@@ -184,7 +184,7 @@ fn create_match_linkage_id(
 fn generate_random_linkage_id(
     client_rand: &SystemRandom,
     secret_key: &LessSafeKey,
-    id_counter: &usize,
+    id_counter: usize,
 ) -> Result<LinkageID, LinkageError> {
     let (random_nonce_bytes, nonce) = generate_random_nonce(client_rand)?;
 
