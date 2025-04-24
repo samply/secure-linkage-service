@@ -39,8 +39,8 @@ fn compute_xor_results(data1: &[ResultData], data2: &[ResultData]) -> Vec<Result
         .map(|(d1, d2)| {
             // Perform the XOR operations directly on the u64 values
             ResultData {
-                confirmed_match: ConfirmedMatchBit(d1.confirmed_match.0 ^ d2.confirmed_match.0),
-                tentative_match: TentativeMatchBit(d1.tentative_match.0 ^ d2.tentative_match.0),
+                confirmed_match: ConfirmedMatchBit(d1.confirmed_match.0.xor(d2.confirmed_match.0)),
+                tentative_match: TentativeMatchBit(d1.tentative_match.0.xor(d2.tentative_match.0)),
                 index_of_best_match: IndexOfBestMatch(
                     d1.index_of_best_match.0 ^ d2.index_of_best_match.0,
                 ),
@@ -104,20 +104,20 @@ mod tests {
         let client_data = ClientLinkageData::new(vec![
             // This will produce a match when XORed with server data
             ResultData::new(
-                ConfirmedMatchBit(1),
-                TentativeMatchBit(0),
+                ConfirmedMatchBit(MatchBit::Set),
+                TentativeMatchBit(MatchBit::Unset),
                 IndexOfBestMatch(0),
             ),
             // This will produce a match when XORed with server data
             ResultData::new(
-                ConfirmedMatchBit(0),
-                TentativeMatchBit(1),
+                ConfirmedMatchBit(MatchBit::Unset),
+                TentativeMatchBit(MatchBit::Set),
                 IndexOfBestMatch(1),
             ),
             // This will NOT produce a match (both client and server have 0)
             ResultData::new(
-                ConfirmedMatchBit(0),
-                TentativeMatchBit(0),
+                ConfirmedMatchBit(MatchBit::Unset),
+                TentativeMatchBit(MatchBit::Unset),
                 IndexOfBestMatch(2),
             ),
         ]);
@@ -127,20 +127,20 @@ mod tests {
             vec![
                 // XOR with client will produce match (1 ^ 0 = 1)
                 ResultData::new(
-                    ConfirmedMatchBit(0),
-                    TentativeMatchBit(1),
+                    ConfirmedMatchBit(MatchBit::Unset),
+                    TentativeMatchBit(MatchBit::Set),
                     IndexOfBestMatch(0),
                 ),
                 // XOR with client will produce match (0 ^ 1 = 1)
                 ResultData::new(
-                    ConfirmedMatchBit(1),
-                    TentativeMatchBit(0),
+                    ConfirmedMatchBit(MatchBit::Set),
+                    TentativeMatchBit(MatchBit::Unset),
                     IndexOfBestMatch(1),
                 ),
                 // XOR with client will produce no match (0 ^ 0 = 0)
                 ResultData::new(
-                    ConfirmedMatchBit(0),
-                    TentativeMatchBit(0),
+                    ConfirmedMatchBit(MatchBit::Unset),
+                    TentativeMatchBit(MatchBit::Unset),
                     IndexOfBestMatch(2),
                 ),
             ],
@@ -211,14 +211,14 @@ mod tests {
             &client_key,
             &wrong_server_key, // This should cause decryption failure
             &ClientLinkageData::new(vec![ResultData::new(
-                ConfirmedMatchBit(1),
-                TentativeMatchBit(0),
+                ConfirmedMatchBit(MatchBit::Set),
+                TentativeMatchBit(MatchBit::Unset),
                 IndexOfBestMatch(0),
             )]),
             &ServerLinkageData::new(
                 vec![ResultData::new(
-                    ConfirmedMatchBit(0),
-                    TentativeMatchBit(1),
+                    ConfirmedMatchBit(MatchBit::Unset),
+                    TentativeMatchBit(MatchBit::Set),
                     IndexOfBestMatch(0),
                 )],
                 vec![server_id],

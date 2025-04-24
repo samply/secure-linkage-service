@@ -1,15 +1,41 @@
 use std::fmt;
 use std::rc::Rc;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MatchBit {
+    Unset,
+    Set,
+}
+
+impl MatchBit {
+    pub fn to_u64(&self) -> u64 {
+        match self {
+            MatchBit::Unset => 0,
+            MatchBit::Set => 1,
+        }
+    }
+
+    pub fn from_u64(value: u64) -> Self {
+        match value {
+            0 => MatchBit::Unset,
+            _ => MatchBit::Set,
+        }
+    }
+
+    pub fn xor(&self, other: Self) -> Self {
+        MatchBit::from_u64(self.to_u64() ^ other.to_u64())
+    }
+}
+
 //
 // Simple wrapper types for match data
 //
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct TentativeMatchBit(pub u64);
+pub struct TentativeMatchBit(pub MatchBit);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ConfirmedMatchBit(pub u64);
+pub struct ConfirmedMatchBit(pub MatchBit);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IndexOfBestMatch(pub u64);
@@ -62,6 +88,12 @@ pub struct ResultData {
     pub index_of_best_match: IndexOfBestMatch,
 }
 
+impl ResultData {
+    pub fn has_a_match(&self) -> bool {
+        self.confirmed_match.0 == MatchBit::Set || self.tentative_match.0 == MatchBit::Set
+    }
+}
+
 // TODO: maybe delete this `new` function?
 impl ResultData {
     pub fn new(
@@ -76,19 +108,35 @@ impl ResultData {
         }
     }
 
-    pub fn from_strings(tentative_match: &str, confirmed_match: &str, index: &str) -> Self {
-        Self {
-            confirmed_match: ConfirmedMatchBit(confirmed_match.parse().unwrap_or(0)),
-            tentative_match: TentativeMatchBit(tentative_match.parse().unwrap_or(0)),
-            index_of_best_match: IndexOfBestMatch(index.parse().unwrap_or(0)),
-        }
+    pub fn from_strings(
+        tentative_match: &str,
+        confirmed_match: &str,
+        index: &str,
+    ) -> Result<Self, LinkageError> {
+        Ok(Self {
+            confirmed_match: ConfirmedMatchBit(MatchBit::from_u64(
+                confirmed_match
+                    .parse()
+                    .map_err(|_| LinkageError::InvalidBase64Encoding)?,
+            )),
+            tentative_match: TentativeMatchBit(MatchBit::from_u64(
+                tentative_match
+                    .parse()
+                    .map_err(|_| LinkageError::InvalidBase64Encoding)?,
+            )),
+            index_of_best_match: IndexOfBestMatch(
+                index
+                    .parse()
+                    .map_err(|_| LinkageError::InvalidBase64Encoding)?,
+            ),
+        })
     }
 
     // Default ResultData with all zeros
     pub fn empty() -> Self {
         Self {
-            confirmed_match: ConfirmedMatchBit(0),
-            tentative_match: TentativeMatchBit(0),
+            confirmed_match: ConfirmedMatchBit(MatchBit::Unset),
+            tentative_match: TentativeMatchBit(MatchBit::Unset),
             index_of_best_match: IndexOfBestMatch(0),
         }
     }
@@ -98,7 +146,7 @@ impl fmt::Display for ResultData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "match-{}-{}-{}",
+            "match-{:?}-{:?}-{}",
             self.confirmed_match.0, self.tentative_match.0, self.index_of_best_match.0
         )
     }

@@ -43,12 +43,6 @@ pub fn generate_linkage_ids(
         .collect()
 }
 
-impl ResultData {
-    pub fn has_a_match(&self) -> bool {
-        self.confirmed_match.0 != 0 || self.tentative_match.0 != 0
-    }
-}
-
 pub fn generate_random_key_material(rand: &SystemRandom) -> Result<[u8; 32], LinkageError> {
     let mut key_material = [0 as u8; 32];
     rand.fill(&mut key_material)
