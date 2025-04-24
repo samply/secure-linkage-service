@@ -129,10 +129,7 @@ fn create_match_linkage_id(
     };
 
     // Step 2: Decode the base64 string to bytes
-    let decoded_bytes = match BASE64_STANDARD.decode(encrypted_id_from_server.0.as_bytes()) {
-        Ok(bytes) => bytes,
-        Err(_) => return Err(LinkageError::InvalidBase64Encoding),
-    };
+    let decoded_bytes = BASE64_STANDARD.decode(encrypted_id_from_server.0.as_bytes())?;
 
     // Validate length before splitting (nonce + encrypted data)
     if decoded_bytes.len() < NONCE_LEN {

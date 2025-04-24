@@ -1,4 +1,6 @@
+use base64::DecodeError;
 use std::fmt;
+use std::num::ParseIntError;
 use std::rc::Rc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -114,21 +116,9 @@ impl ResultData {
         index: &str,
     ) -> Result<Self, LinkageError> {
         Ok(Self {
-            confirmed_match: ConfirmedMatchBit(MatchBit::from_u64(
-                confirmed_match
-                    .parse()
-                    .map_err(|_| LinkageError::InvalidBase64Encoding)?,
-            )),
-            tentative_match: TentativeMatchBit(MatchBit::from_u64(
-                tentative_match
-                    .parse()
-                    .map_err(|_| LinkageError::InvalidBase64Encoding)?,
-            )),
-            index_of_best_match: IndexOfBestMatch(
-                index
-                    .parse()
-                    .map_err(|_| LinkageError::InvalidBase64Encoding)?,
-            ),
+            confirmed_match: ConfirmedMatchBit(MatchBit::from_u64(confirmed_match.parse()?)),
+            tentative_match: TentativeMatchBit(MatchBit::from_u64(tentative_match.parse()?)),
+            index_of_best_match: IndexOfBestMatch(index.parse()?),
         })
     }
 
@@ -238,10 +228,12 @@ pub struct LinkageResult(pub Vec<Option<LinkageID>>);
 pub enum LinkageError {
     #[error("Decryption failed: {0}")]
     DecryptionFailed(String),
-    #[error("Invalid base64 encoding")]
-    Base64Error,
+    #[error("Base64 decoding error: {0}")]
+    Base64DecodingError(#[from] DecodeError),
     #[error("No input data for linkage")]
     EmptyInput,
+    #[error("Invalid number format: {0}")]
+    ParseIntError(#[from] ParseIntError),
     #[error("Cannot create random key material")]
     CannotCreateRandomKeyMaterial,
     #[error("Cannot create LessSafeKey")]
@@ -254,8 +246,6 @@ pub enum LinkageError {
     CannotEncryptPayload,
     #[error("Decoded ID too short")]
     DecodedIdTooShort,
-    #[error("Invalid base64 encoding")]
-    InvalidBase64Encoding,
     #[error("ServerID not found for best match index")]
     ServerIDNotFoundForBestMatchIndex,
 }
