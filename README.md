@@ -35,7 +35,7 @@ This assumes the system has already been setup (see previous step).
 # (if not already inside it)
 source venv/bin/activate
 
-# Run the tests
+# Run the unit tests
 pytest
 
 # Start the server in development mode (without TLS)
