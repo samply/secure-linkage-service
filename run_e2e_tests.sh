@@ -1,24 +1,6 @@
 #!/bin/bash -e
 
-# Initialize the server using the try-server.sh script
-./try-server.sh &
-
-# Capture the server PID to terminate it later
-SERVER_PID=$!
-
-# Function to terminate the server
-#!/bin/bash -e
-
-# Initialize the server using the try-server.sh script
-./try-server.sh &
-
-# Capture the server PID to terminate it later
-SERVER_PID=$!
-
-# Function to terminate the server
-#!/bin/bash -e
-
-# Initialize the server using the try-server.sh script
+# Initialize the server
 ./try-server.sh &
 
 # Capture the server PID to terminate it later
@@ -34,12 +16,19 @@ terminate_server() {
 # Ensure the server process is killed on script exit
 trap terminate_server EXIT
 
-# Wait for the server to start
+# Wait for the server to start...
 sleep 10
 
-# Test scenario 1: Server Role
-echo "Running test scenario 1: Server Role"
-RESPONSE_1=$(curl -s -w "%{http_code}" -o /dev/null -H "Content-Type: application/json" \
+
+# Test Scenarios
+
+
+echo "Testing Endpoint: Linkage Result..."
+
+
+# Linkage Test scenario 1: Server Role
+echo "Testing scenario: Linkage Result (Server Role)..."
+RESPONSE_SERVER_ROLE=$(curl -s -w "%{http_code}" -o /dev/null -H "Content-Type: application/json" \
   -d '{
        "role": "server",
        "result": [
@@ -62,17 +51,17 @@ RESPONSE_1=$(curl -s -w "%{http_code}" -o /dev/null -H "Content-Type: applicatio
        "ids": ["aGVsbG93b3JsZA==", "ZGF0YXNjaWVuY2U=", "cHl0aG9uaXNmdW4="]
      }' http://localhost:5000/linkageResult/dkfz/tuda)
 
-# Assertion: Check if the response status code is 200
-if [ "$RESPONSE_1" -eq 200 ]; then
-    echo "✅ Test scenario 1 passed."
+if [ "$RESPONSE_SERVER_ROLE" -eq 200 ]; then
+    echo "✅ Linkage Result (Server Role) Test: passed!"
 else
-    echo "🆘 Test scenario 1 failed. Status code: $RESPONSE_1"
+    echo "🆘 Linkage Result (Server Role) Test: failed. Status code: $RESPONSE_SERVER_ROLE"
     exit 1
 fi
 
-# Test scenario 2: Client Role
-echo "Running test scenario 2: Client Role"
-RESPONSE_2=$(curl -s -w "%{http_code}" -o /dev/null -H "Content-Type: application/json" \
+
+# Linkage Test scenario 2: Client Role
+echo "Testing scenario: Linkage Result (Client Role)..."
+RESPONSE_CLIENT_ROLE=$(curl -s -w "%{http_code}" -o /dev/null -H "Content-Type: application/json" \
   -d '{
        "role": "client",
        "result": [
@@ -94,11 +83,10 @@ RESPONSE_2=$(curl -s -w "%{http_code}" -o /dev/null -H "Content-Type: applicatio
        ]
      }' http://localhost:5000/linkageResult/tuda/dkfz)
 
-# Assertion: Check if the response status code is 200
-if [ "$RESPONSE_2" -eq 200 ]; then
-    echo "✅ Test scenario 2 passed."
+if [ "$RESPONSE_CLIENT_ROLE" -eq 200 ]; then
+    echo "✅ Linkage Result (Client Role) Test: passed."
 else
-    echo "🆘 Test scenario 2 failed. Status code: $RESPONSE_2"
+    echo "🆘 Linkage Result (Client Role) Test: failed. Status code: $RESPONSE_CLIENT_ROLE"
     exit 1
 fi
 
