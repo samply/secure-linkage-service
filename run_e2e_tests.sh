@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
-# Initialize the server
-./try-server.sh &
+# Initialize the server and redirect output to server.log
+./try-server.sh > server.log 2>&1 &
 
 # Capture the server PID to terminate it later
 SERVER_PID=$!
@@ -16,9 +16,21 @@ terminate_server() {
 # Ensure the server process is killed on script exit
 trap terminate_server EXIT
 
-# Wait for the server to start...
-sleep 10
-
+# Wait for server to start using port check
+echo "Waiting for server to start on port 5000..."
+MAX_ATTEMPTS=30
+ATTEMPT=0
+while ! curl -s -o /dev/null --max-time 1 http://localhost:5000; do
+    ATTEMPT=$((ATTEMPT+1))
+    if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
+        echo "Server did not start within $MAX_ATTEMPTS seconds. Aborting."
+        echo "Server logs:"
+        cat server.log
+        exit 1
+    fi
+    sleep 1
+done
+echo "Server started after $ATTEMPT seconds"
 
 # Test Scenarios
 
