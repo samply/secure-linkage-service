@@ -3,7 +3,7 @@ from flask import jsonify
 from flask import request
 from flask import make_response
 from linkserv.linkage_server import LinkageServer
-from Crypto import Random
+from Cryptodome import Random
 import time
 import os
 

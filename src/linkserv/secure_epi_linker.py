@@ -2,9 +2,9 @@ import base64
 import binascii
 
 import numpy as np
-from Crypto import Random
-from Crypto.Cipher import AES
-from Crypto.Util import Counter
+from Cryptodome import Random
+from Cryptodome.Cipher import AES
+from Cryptodome.Util import Counter
 
 
 class AESCipher:

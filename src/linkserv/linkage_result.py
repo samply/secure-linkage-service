@@ -1,5 +1,5 @@
 from flask import make_response
-import simplejson as json
+import json
 
 
 class LinkageResult:
