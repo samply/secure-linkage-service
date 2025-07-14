@@ -102,10 +102,14 @@ class LinkageResult:
                 # id from the server with the tentative match bit and encrypt
                 # everything with the client's key.
                 client_linkage_id = client.encrypt(
-                    bytes(tmatch) +
+                    bytes([tmatch]) +  # Convert to bytes of length 1
                     server.decrypt(
                         server_ids[bestind],
                         False), True)
+                # Ensure ID is string
+                if isinstance(client_linkage_id, bytes):
+                    client_linkage_id = client_linkage_id.decode('utf-8')
+
                 # Output is differently formated,
                 # based on one or multiple results.
                 # (1:n linkage or n:m linkage)
@@ -115,6 +119,7 @@ class LinkageResult:
                         {'result': {'linkageId': client_linkage_id}})
                 else:
                     ids.append({'linkageId': client_linkage_id})
+
             # If no match...
             else:
                 single = len(client_matches) == 1
@@ -124,5 +129,9 @@ class LinkageResult:
                         {'result': {'linkageId': client.generate_id()}})
                 else:
                     ids.append({'linkageId': client.generate_id()})
+
+        for i in range(len(ids)):
+            if isinstance(ids[i]['linkageId'], bytes):
+                ids[i]['linkageId'] = ids[i]['linkageId'].decode('utf-8')
 
         return json.dumps({'result': ids})
