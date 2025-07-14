@@ -6,7 +6,7 @@ class LinkageResult:
     def __init__(self, client, server):
         self.client = client
         self.server = server
-        self.reset();
+        self.reset()
 
     def reset(self):
         self.client_data = False
