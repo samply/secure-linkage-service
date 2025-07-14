@@ -12,7 +12,7 @@ class LinkageServer:
         self.epilinker[epilinker_id] = SecureEpilinker(
             epilinker_id, key, padding)
 
-    def generate_ids(self, remote_id, count):
+    def generate_ids(self, remote_id, count=1):
         if remote_id not in self.epilinker:
             raise KeyError('Invalid Remote Id')
 

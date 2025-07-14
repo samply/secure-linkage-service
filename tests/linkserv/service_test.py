@@ -50,6 +50,23 @@ def test_get_fresh_ids_count_0(client, remote_id):
     assert 'linkageIds' in response_json
     assert response_json['linkageIds'] == []
 
+@pytest.mark.parametrize("remote_id", ["tuda", "dkfz", "charite"])
+def test_get_fresh_ids_default_count(client, mocker, remote_id):
+    expected_ids = ['aGVsbG93b3JsZA==']
+    mocker.patch.object(LinServ, 'generate_ids', return_value=expected_ids)
+
+    response = client.get(f'/freshIDs/{remote_id}')
+
+    # print(response.data)
+
+    assert response.status_code == 200
+
+    response_json = response.get_json()
+
+    assert response_json is not None
+    assert 'linkageIds' in response_json
+    assert response_json['linkageIds'] == expected_ids
+
 
 @pytest.mark.parametrize("remote_id", ["tuda", "dkfz", "charite"])
 def test_get_fresh_ids_count_1(client, mocker, remote_id):
