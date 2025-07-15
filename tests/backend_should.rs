@@ -109,9 +109,9 @@ fn compute_linkage_should_compute_linkage_id_when_match_and_no_match() {
     for result in &linkage_result.0[0..2] {
         match result {
             Some(id) => {
-                assert!(!id.0 .0.contains("ERROR"), "Unexpected error in linkage ID");
+                assert!(!id.0.0.contains("ERROR"), "Unexpected error in linkage ID");
                 // Match-based IDs should be longer due to containing the server ID
-                assert!(id.0 .0.len() > 50, "Match ID seems too short");
+                assert!(id.0.0.len() > 50, "Match ID seems too short");
             }
             None => panic!("Expected Some(LinkageID)"),
         }
@@ -121,12 +121,12 @@ fn compute_linkage_should_compute_linkage_id_when_match_and_no_match() {
     match &linkage_result.0[2] {
         Some(id) => {
             assert!(
-                !id.0 .0.contains("ERROR"),
+                !id.0.0.contains("ERROR"),
                 "Unexpected error in random linkage ID"
             );
             // Random IDs will be shorter than match-based ones
             assert!(
-                id.0 .0.len() > 20 && id.0 .0.len() < 50,
+                id.0.0.len() > 20 && id.0.0.len() < 50,
                 "Random ID length unexpected"
             );
         }

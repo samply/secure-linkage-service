@@ -3,14 +3,34 @@ use base64::prelude::*;
 use ring::aead::*;
 use ring::rand::{SecureRandom, SystemRandom};
 
+/// Generate a cryptographically secure random linkage ID
+///
+/// This function should be mapped to a public endpoint
+pub fn generate_random_linkage_id(
+    client_rand: &SystemRandom,
+    secret_key: &LessSafeKey,
+    id_counter: usize,
+) -> Result<LinkageID, LinkageError> {
+    let (random_nonce_bytes, nonce) = generate_random_nonce(client_rand)?;
+    let payload = generate_payload_from(id_counter);
+    let aad = Aad::from(random_nonce_bytes);
+    let encrypted_payload = encrypt_payload(&secret_key, nonce, aad, payload)?;
+    let combined = combine_nonce_and_payload(&random_nonce_bytes, &encrypted_payload);
+    let encoded = BASE64_STANDARD.encode(&combined);
+    Ok(LinkageID::new(&encoded).unwrap())
+}
+
 /// Result type for compute_linkage function
 
 /// Computes linkage between client and server data using an immutable approach
 /// with XChaCha20-Poly1305 encryption. Always returns a vector of results.
-// 2. Process Results - Create appropriate LinkageIDs based on XOR results
+///
+/// Creates appropriate LinkageIDs based on XOR results.
 
-/// Process all XOR results to generate LinkageIDs
-/// Returns a vector of Option<LinkageID> for each result
+/// Process all XOR results to generate LinkageIDs.
+/// Returns a vector of Option<LinkageID> for each result.
+///
+/// This function should be mapped to a public endpoint.
 pub fn generate_linkage_ids(
     client_rand: &SystemRandom,
     client_key: &LessSafeKey,
@@ -72,6 +92,7 @@ pub fn generate_linkage_id(
         generate_random_linkage_id(client_rand, &random_key, id_counter)
     }
 }
+
 /// Generates a random nonce for use with AEAD encryption
 ///
 /// Returns both the raw nonce bytes and the Ring library Nonce object
@@ -175,27 +196,6 @@ fn create_match_linkage_id(
     let combined = combine_nonce_and_payload(&second_nonce_bytes, &encrypted_payload);
 
     // Step 4: Encode again to Base64
-    let encoded = BASE64_STANDARD.encode(&combined);
-
-    Ok(LinkageID::new(&encoded).unwrap())
-}
-
-/// Generate a cryptographically secure random linkage ID
-fn generate_random_linkage_id(
-    client_rand: &SystemRandom,
-    secret_key: &LessSafeKey,
-    id_counter: usize,
-) -> Result<LinkageID, LinkageError> {
-    let (random_nonce_bytes, nonce) = generate_random_nonce(client_rand)?;
-
-    let payload = generate_payload_from(id_counter);
-
-    let aad = Aad::from(random_nonce_bytes);
-
-    let encrypted_payload = encrypt_payload(&secret_key, nonce, aad, payload)?;
-
-    let combined = combine_nonce_and_payload(&random_nonce_bytes, &encrypted_payload);
-
     let encoded = BASE64_STANDARD.encode(&combined);
 
     Ok(LinkageID::new(&encoded).unwrap())
