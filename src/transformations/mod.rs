@@ -1,6 +1,7 @@
 pub mod crypto;
+pub mod linkage;
 use crate::domain::*;
-use crate::transformations::crypto::generate_linkage_ids;
+use crate::transformations::linkage::generate_linkage_ids;
 use ring::aead::LessSafeKey;
 use ring::rand::SystemRandom;
 
