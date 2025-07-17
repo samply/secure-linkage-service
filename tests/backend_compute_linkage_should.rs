@@ -1,15 +1,14 @@
-use base64::prelude::*;
-use ring::{aead::Aad, rand::SystemRandom};
+use ring::rand::SystemRandom;
 use secure_linkage_service::{
     domain::*,
     transformations::{
         compute_linkage,
-        crypto::{generate_key, generate_random_key_material, generate_random_nonce},
+        crypto::{encrypt_data_to_base64, generate_key, generate_random_key_material},
     },
 };
 
 #[test]
-fn compute_linkage_should_handle_empty_input() {
+fn handle_empty_input() {
     let rand = SystemRandom::new();
     let client_data = ClientLinkageData::empty();
     let server_data = ServerLinkageData::empty();
@@ -23,7 +22,7 @@ fn compute_linkage_should_handle_empty_input() {
 }
 
 #[test]
-fn compute_linkage_should_compute_linkage_id_when_match_and_no_match() {
+fn handle_correct_input_with_match_and_no_match() {
     let rand = SystemRandom::new();
 
     let server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
@@ -39,15 +38,9 @@ fn compute_linkage_should_compute_linkage_id_when_match_and_no_match() {
     let encrypted_server_ids: Vec<RecordId> = plaintexts
         .iter()
         .map(|plaintext| {
-            let (nonce_bytes, nonce) = generate_random_nonce(&rand).unwrap();
-            let mut data = plaintext.clone();
-            server_key
-                .seal_in_place_append_tag(nonce, Aad::from(nonce_bytes), &mut data)
+            let encrypted = encrypt_data_to_base64(&rand, &server_key, plaintext)
                 .expect("Encryption should succeed");
-            let mut combined = Vec::new();
-            combined.extend_from_slice(&nonce_bytes);
-            combined.extend_from_slice(&data);
-            RecordId::new(&BASE64_STANDARD.encode(&combined)).unwrap()
+            RecordId(encrypted)
         })
         .collect();
 
@@ -135,7 +128,7 @@ fn compute_linkage_should_compute_linkage_id_when_match_and_no_match() {
 }
 
 #[test]
-fn compute_linkage_should_fail_with_wrong_key() {
+fn fail_with_wrong_key() {
     let rand = SystemRandom::new();
 
     // Generate three different keys
@@ -143,18 +136,10 @@ fn compute_linkage_should_fail_with_wrong_key() {
     let wrong_server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
-    // Server encrypts with REAL key
-    let (nonce_bytes, nonce) = generate_random_nonce(&rand).unwrap();
-    let mut encrypted = b"test_data".to_vec();
-    real_server_key
-        .seal_in_place_append_tag(nonce, Aad::from(nonce_bytes), &mut encrypted)
+    let encrypted = encrypt_data_to_base64(&rand, &real_server_key, b"test_data")
         .expect("Encryption should succeed");
+    let server_id = RecordId(encrypted);
 
-    // Package
-    let mut combined = Vec::new();
-    combined.extend_from_slice(&nonce_bytes);
-    combined.extend_from_slice(&encrypted);
-    let server_id = RecordId::new(&BASE64_STANDARD.encode(&combined)).unwrap();
     // Test setup - client has WRONG server key
     let linkage_result = compute_linkage(
         &rand,

@@ -241,6 +241,8 @@ pub enum LinkageError {
     #[error("Cannot create LessSafeKey")]
     CannotCreateLessSafeKey,
     #[error("Invalid nonce size")]
+    InvalidLinkageId,
+    #[error("Invalid Linkage Id")]
     InvalidNonceSize,
     #[error("Cannot not generate Nonce")]
     CannotGenerateNonce,

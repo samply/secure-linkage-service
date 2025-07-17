@@ -1,5 +1,5 @@
-use crate::crypto::*;
 use crate::domain::*;
+use crate::transformations::crypto::*;
 use base64::prelude::*;
 use ring::aead::*;
 use ring::rand::SystemRandom;
@@ -82,7 +82,6 @@ pub fn generate_linkage_id(
 }
 
 /// Create a linkage ID for a matching record
-/// Returns Result<LinkageID, ring::error::Unspecified>
 fn create_match_linkage_id(
     client_rand: &SystemRandom,
     client_key: &LessSafeKey,
@@ -90,61 +89,22 @@ fn create_match_linkage_id(
     server_ids: &[RecordId],
     xor_result: &ResultData,
 ) -> Result<LinkageID, LinkageError> {
-    // Step 1: get the server_ID[bestIndex]
     let best_index = xor_result.index_of_best_match.0 as usize;
-    let encrypted_id_from_server = match server_ids.get(best_index) {
-        Some(id) => id,
-        None => return Err(LinkageError::ServerIDNotFoundForBestMatchIndex),
-    };
+    let encrypted_id_from_server = server_ids
+        .get(best_index)
+        .ok_or(LinkageError::ServerIDNotFoundForBestMatchIndex)?;
 
-    // Step 2: Decode the base64 string to bytes
-    let decoded_bytes = BASE64_STANDARD.decode(encrypted_id_from_server.0.as_bytes())?;
+    let decrypted_id = decrypt_data_from_base64(
+        server_key,
+        &encrypted_id_from_server.0, // Directly reference the Base64EncodedString from RecordId
+    )?;
 
-    // Validate length before splitting (nonce + encrypted data)
-    if decoded_bytes.len() < NONCE_LEN {
-        return Err(LinkageError::DecodedIdTooShort);
-    }
-
-    // Step 3: Decrypt the server ID (with the server key)
-
-    // 3.1 Split into nonce and ciphertext
-    let (nonce_bytes, ciphertext) = decoded_bytes.split_at(NONCE_LEN);
-
-    // 3.2 Convert nonce to fixed-size array
-    let nonce_bytes: [u8; NONCE_LEN] = match nonce_bytes.try_into() {
-        Ok(arr) => arr,
-        Err(_) => return Err(LinkageError::InvalidNonceSize),
-    };
-
-    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
-    let aad = Aad::from(nonce_bytes);
-
-    // 3.3 Actually decrypt the server payload (with the server key)
-    let mut payload = ciphertext.to_vec();
-    let decrypted_id = match server_key.open_in_place(nonce, aad, &mut payload) {
-        Ok(d) => d,
-        Err(e) => {
-            println!("Decryption failed: {:?}", e);
-            println!("Nonce bytes: {:?}", nonce_bytes);
-            println!("Ciphertext length: {}", ciphertext.len());
-            return Err(LinkageError::DecryptionFailed(e.to_string()));
-        }
-    };
-
-    // 3.4: prepend the tentative match bit to the decrypted ID
-    let mut new_payload = Vec::new();
+    // Construct new payload with match bit prefix
+    let mut new_payload = Vec::with_capacity(1 + decrypted_id.len());
     new_payload.push(xor_result.tentative_match.0 as u8);
-    new_payload.extend_from_slice(decrypted_id);
+    new_payload.extend(decrypted_id);
 
-    // 3.5: actually encrypt the combined data (with the client key)
-    let (second_nonce_bytes, second_nonce) = generate_random_nonce(&client_rand)?;
-    let second_aad = Aad::from(second_nonce_bytes);
-    let encrypted_payload = encrypt_payload(&client_key, second_nonce, second_aad, new_payload)?;
+    let encrypted_base64_str = encrypt_data_to_base64(client_rand, client_key, &new_payload)?;
 
-    let combined = combine_nonce_and_payload(&second_nonce_bytes, &encrypted_payload);
-
-    // Step 4: Encode again to Base64
-    let encoded = BASE64_STANDARD.encode(&combined);
-
-    Ok(LinkageID::new(&encoded).unwrap())
+    LinkageID::new(&encrypted_base64_str.0).map_err(|_| LinkageError::InvalidLinkageId)
 }

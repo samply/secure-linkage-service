@@ -1,6 +1,45 @@
 use crate::domain::*;
+use base64::Engine;
+use base64::prelude::BASE64_STANDARD;
 use ring::aead::*;
 use ring::rand::{SecureRandom, SystemRandom};
+use std::rc::Rc;
+
+pub fn encrypt_data_to_base64(
+    rand: &SystemRandom,
+    key: &LessSafeKey,
+    plaintext: &[u8],
+) -> Result<Base64EncodedString, LinkageError> {
+    let (nonce_bytes, nonce) = generate_random_nonce(rand)?;
+    let aad = Aad::from(nonce_bytes);
+    let mut data = plaintext.to_vec();
+    key.seal_in_place_append_tag(nonce, aad, &mut data)
+        .map_err(|_| LinkageError::CannotEncryptPayload)?;
+    let combined = combine_nonce_and_payload(&nonce_bytes, &data);
+    let encoded = BASE64_STANDARD.encode(&combined);
+    Ok(Base64EncodedString(Rc::from(encoded))) // Wrap String in Base64EncodedString
+}
+
+pub fn decrypt_data_from_base64(
+    key: &LessSafeKey,
+    base64_str: &Base64EncodedString,
+) -> Result<Vec<u8>, LinkageError> {
+    let base64_str_ref: &str = base64_str.0.as_ref(); // Convert Rc<str> to &str
+    let decoded_bytes = BASE64_STANDARD.decode(base64_str_ref)?; // Use the string reference
+    if decoded_bytes.len() < NONCE_LEN {
+        return Err(LinkageError::DecodedIdTooShort);
+    }
+    let (nonce_bytes, ciphertext) = decoded_bytes.split_at(NONCE_LEN);
+    let nonce_bytes: [u8; NONCE_LEN] = nonce_bytes
+        .try_into()
+        .map_err(|_| LinkageError::InvalidNonceSize)?;
+    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
+    let aad = Aad::from(nonce_bytes);
+    let mut data = ciphertext.to_vec();
+    key.open_in_place(nonce, aad, &mut data)
+        .map_err(|e| LinkageError::DecryptionFailed(e.to_string()))?;
+    Ok(data.to_vec())
+}
 
 pub fn generate_random_key_material(rand: &SystemRandom) -> Result<[u8; 32], LinkageError> {
     let mut key_material = [0 as u8; 32];
