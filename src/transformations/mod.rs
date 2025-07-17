@@ -37,15 +37,14 @@ fn compute_xor_results(data1: &[ResultData], data2: &[ResultData]) -> Vec<Result
     data1
         .iter()
         .zip(data2.iter())
-        .map(|(d1, d2)| {
-            // Perform the XOR operations directly on the u64 values
-            ResultData {
-                confirmed_match: ConfirmedMatchBit(d1.confirmed_match.0.xor(d2.confirmed_match.0)),
-                tentative_match: TentativeMatchBit(d1.tentative_match.0.xor(d2.tentative_match.0)),
-                index_of_best_match: IndexOfBestMatch(
-                    d1.index_of_best_match.0 ^ d2.index_of_best_match.0,
-                ),
-            }
+        .map(|(d1, d2)| ResultData {
+            confirmed_match: ConfirmedMatchBit(d1.confirmed_match.0.xor(d2.confirmed_match.0)),
+            tentative_match: TentativeMatchBit(d1.tentative_match.0.xor(d2.tentative_match.0)),
+            index_of_best_match: IndexOfBestMatch(
+                // Clamp index to valid range
+                d1.index_of_best_match.0.min(usize::MAX as u64)
+                    ^ d2.index_of_best_match.0.min(usize::MAX as u64),
+            ),
         })
         .collect()
 }
