@@ -1,3 +1,5 @@
+use base64::Engine;
+use base64::prelude::BASE64_STANDARD;
 use ring::rand::SystemRandom;
 use secure_linkage_service::{
     domain::*,
@@ -164,4 +166,42 @@ fn fail_with_wrong_key() {
         linkage_result,
         Err(LinkageError::DecryptionFailed(_))
     ));
+}
+
+#[test]
+fn fail_with_mismatched_data_length() {
+    let rand = SystemRandom::new();
+    let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
+    let server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
+
+    // Client data has 1 item
+    let client_data = ClientLinkageData::new(vec![ResultData::new(
+        ConfirmedMatchBit(MatchBit::Set),
+        TentativeMatchBit(MatchBit::Unset),
+        IndexOfBestMatch(0),
+    )]);
+
+    // Server data has 2 items
+    let server_data = ServerLinkageData::new(
+        vec![
+            ResultData::new(
+                ConfirmedMatchBit(MatchBit::Unset),
+                TentativeMatchBit(MatchBit::Set),
+                IndexOfBestMatch(0),
+            ),
+            ResultData::new(
+                ConfirmedMatchBit(MatchBit::Set),
+                TentativeMatchBit(MatchBit::Unset),
+                IndexOfBestMatch(1),
+            ),
+        ],
+        vec![
+            RecordId::new(&BASE64_STANDARD.encode(b"record1")).unwrap(),
+            RecordId::new(&BASE64_STANDARD.encode(b"record2")).unwrap(),
+        ],
+    );
+
+    let result = compute_linkage(&rand, &client_key, &server_key, &client_data, &server_data);
+
+    assert!(matches!(result, Err(LinkageError::MismatchedDataLength)));
 }

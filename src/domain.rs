@@ -252,4 +252,6 @@ pub enum LinkageError {
     DecodedIdTooShort,
     #[error("ServerID not found for best match index")]
     ServerIDNotFoundForBestMatchIndex,
+    #[error("Client and server data have different lengths")]
+    MismatchedDataLength,
 }

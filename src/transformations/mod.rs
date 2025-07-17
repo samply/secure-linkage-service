@@ -18,6 +18,10 @@ pub fn compute_linkage(
         return Err(LinkageError::EmptyInput);
     }
 
+    if client_data.share_data.len() != server_data.share_data.len() {
+        return Err(LinkageError::MismatchedDataLength);
+    }
+
     let xor_results = compute_xor_results(&client_data.share_data, &server_data.share_data);
 
     let server_ids = server_data.ids();
