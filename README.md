@@ -59,22 +59,19 @@ deactivate
 4. Stop the server.
 5. Disable the virtual environment.
 
-#### Automated Testing
-
-Just execute the `run_e2e_tests.sh` script:
+#### E2E Testing
 
    ```sh
-   ./run_e2e_tests.sh
+   ./run-e2e-tests.sh
    ```
 
 ## Troubleshooting / Known Problems
 
 ### E2E testing
 
-* Make sure both `try-server.sh` and `run_e2e_tests.sh` are executable:
+* Make sure all scripts are executable:
    ```sh
-   chmod +x try-server.sh
-   chmod +x run_e2e_tests.sh
+   chmod +x *.sh
    ```
 * There is bug in the E2E script that prevents it from successfully killing the server process.
 You will have to do it manually, via `kill`.
@@ -87,7 +84,7 @@ You will have to do it manually, via `kill`.
 ImportError: cannot import name 'generate_etag' from partially initialized module 'werkzeug.http' (most likely due to a circular import)
 ```
 Just re-create the virtual environment and try again.
-The script `try-server.sh` takes care of this.
+The script `start-server.sh` takes care of this.
 
 
 ## License
