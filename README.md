@@ -54,8 +54,21 @@ deactivate
 
 0. Re-create and activate the virtual environment.
 1. Start the server.
-2. Send a request with a *server* role.
-3. Within 20 seconds (default timeout), send a request with a *client* role.
+2. Send a request with data matching a given role (either "server" or "client").
+3. Within 20 seconds (default timeout), send a request with data matching
+   *the other* role (either "client" or "server", respectively).
+
+The request `/LinkageResult/:party_a/:party_b` means "I am party A, sending data
+to party B. Whatever my role is, in order to the linkage request to succeed,
+party B should have the other role."
+
+The server role will get the 200 OK immediately; the client role will wait
+(by default, for 20 seconds) until a matching server sends a request, getting a
+201 while he waits.
+
+If a matching server role request is made within the time limit, the client will
+receive the 200 OK. Otherwise, it will receive a 408 request timeout.
+
 4. Stop the server.
 5. Disable the virtual environment.
 
