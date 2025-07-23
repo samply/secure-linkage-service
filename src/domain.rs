@@ -250,8 +250,8 @@ pub enum LinkageError {
     CannotEncryptPayload,
     #[error("Decoded ID too short")]
     DecodedIdTooShort,
-    #[error("ServerID not found for best match index")]
-    ServerIDNotFoundForBestMatchIndex,
+    #[error("ServerID not found for best match index (index: {0})")]
+    ServerIDNotFoundForBestMatchIndex(usize),
     #[error("Client and server data have different lengths")]
     MismatchedDataLength,
 }

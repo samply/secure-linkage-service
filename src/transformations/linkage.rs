@@ -92,8 +92,7 @@ fn create_match_linkage_id(
     let best_index = xor_result.index_of_best_match.0 as usize;
     let encrypted_id_from_server = server_ids
         .get(best_index)
-        .ok_or(LinkageError::ServerIDNotFoundForBestMatchIndex)?;
-
+        .ok_or(LinkageError::ServerIDNotFoundForBestMatchIndex(best_index))?;
     let decrypted_id = decrypt_data_from_base64(
         server_key,
         &encrypted_id_from_server.0, // Directly reference the Base64EncodedString from RecordId
