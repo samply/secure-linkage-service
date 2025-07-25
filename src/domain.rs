@@ -1,5 +1,6 @@
 use base64::prelude::BASE64_STANDARD;
 use base64::{DecodeError, Engine};
+use ring::aead::LessSafeKey;
 use std::fmt;
 use std::num::ParseIntError;
 use std::rc::Rc;
@@ -202,6 +203,47 @@ impl ServerLinkageData {
 //
 // Linkage ID and related types
 //
+
+// Newtype pattern for LinkageParty hostname
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct HostName(pub String);
+
+impl HostName {
+    pub fn new(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl fmt::Display for HostName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LinkageParty {
+    pub hostname: String,
+    pub secret_key: LessSafeKey,
+}
+
+impl LinkageParty {
+    pub fn new(hostname: String, secret_key: LessSafeKey) -> Self {
+        Self {
+            hostname,
+            secret_key,
+        }
+    }
+}
+
+// Ignore secret_key for equality checks
+impl PartialEq for LinkageParty {
+    fn eq(&self, other: &Self) -> bool {
+        self.hostname == other.hostname
+    }
+}
+
+// Dummy implementation due to the ad-hoc implementation of PartialEq
+impl Eq for LinkageParty {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinkageID(pub Base64EncodedString);

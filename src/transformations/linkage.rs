@@ -30,9 +30,7 @@ pub fn generate_random_linkage_id(
 
 /// Process all XOR results to generate LinkageIDs.
 /// Returns a vector of Option<LinkageID> for each result.
-///
-/// This function should be mapped to a public endpoint.
-pub fn generate_linkage_ids(
+pub fn generate_computed_linkage_ids(
     client_rand: &SystemRandom,
     client_key: &LessSafeKey,
     server_key: &LessSafeKey,
@@ -44,14 +42,14 @@ pub fn generate_linkage_ids(
     }
 
     // Invoking generate_linkage_id as if in:
-    // `(map generate-linkage-id (range) results (repeat client-key) (repeat server-key) server-ids)`
+    // `(map xor-result-to-linkage-id (range) xor-results (repeat client-key) (repeat server-key) server-ids)`
     // with `(range)` acting as the counter sequence
 
     xor_results
         .iter()
         .enumerate() // adds the counter, starting from 0.
         .map(|(counter, xor_result)| {
-            generate_linkage_id(
+            xor_result_to_linkage_id(
                 counter,
                 client_rand,
                 client_key,
@@ -64,7 +62,7 @@ pub fn generate_linkage_ids(
         .collect()
 }
 
-pub fn generate_linkage_id(
+fn xor_result_to_linkage_id(
     id_counter: usize,
     client_rand: &SystemRandom,
     client_key: &LessSafeKey,

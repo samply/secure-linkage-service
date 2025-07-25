@@ -1,46 +1,47 @@
 pub mod crypto;
 pub mod linkage;
 use crate::domain::*;
-use crate::transformations::linkage::generate_linkage_ids;
-use ring::aead::LessSafeKey;
+use crate::transformations::linkage::generate_computed_linkage_ids;
 use ring::rand::SystemRandom;
 
-/// Computes linkage between client and server data using an immutable approach with references
+/// Compute linkage between client and server data
+/// Returns a LinkageResult containing Option<LinkageID> for each record
+///
+/// This function should be linked to an endpoint
 pub fn compute_linkage(
-    client_rand: &SystemRandom,
-    client_key: &LessSafeKey,
-    server_key: &LessSafeKey,
+    client_party: &LinkageParty,
+    server_party: &LinkageParty,
     client_data: &ClientLinkageData,
     server_data: &ServerLinkageData,
 ) -> Result<LinkageResult, LinkageError> {
-    // Check if there's any data to work with
+    // Validate input data
     if client_data.share_data.is_empty() || server_data.share_data.is_empty() {
         return Err(LinkageError::EmptyInput);
     }
-
     if client_data.share_data.len() != server_data.share_data.len() {
         return Err(LinkageError::MismatchedDataLength);
     }
 
-    let xor_results = compute_xor_results(&client_data.share_data, &server_data.share_data);
+    let xor_results = xor_data_shares(&client_data.share_data, &server_data.share_data);
 
-    let server_ids = server_data.ids();
+    let rand = SystemRandom::new();
 
-    let linkage_ids = generate_linkage_ids(
-        &client_rand,
-        &client_key,
-        &server_key,
-        &server_ids,
+    // Generate linkage IDs based on XOR results
+    let linkage_ids = generate_computed_linkage_ids(
+        &rand,
+        &client_party.secret_key,
+        &server_party.secret_key,
+        &server_data.ids(),
         &xor_results,
     )?;
 
     Ok(LinkageResult(linkage_ids))
 }
 
-fn compute_xor_results(data1: &[ResultData], data2: &[ResultData]) -> Vec<ResultData> {
-    data1
+fn xor_data_shares(data_share_1: &[ResultData], data_share_2: &[ResultData]) -> Vec<ResultData> {
+    data_share_1
         .iter()
-        .zip(data2.iter())
+        .zip(data_share_2.iter())
         .map(|(d1, d2)| ResultData {
             confirmed_match: ConfirmedMatchBit(d1.confirmed_match.0.xor(d2.confirmed_match.0)),
             tentative_match: TentativeMatchBit(d1.tentative_match.0.xor(d2.tentative_match.0)),

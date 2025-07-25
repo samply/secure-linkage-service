@@ -18,7 +18,10 @@ fn handle_empty_input() {
     let server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
-    let result = compute_linkage(&rand, &client_key, &server_key, &client_data, &server_data);
+    let client_party = LinkageParty::new("client.example.com".to_string(), client_key);
+    let server_party = LinkageParty::new("server.example.com".to_string(), server_key);
+
+    let result = compute_linkage(&client_party, &server_party, &client_data, &server_data);
 
     assert!(matches!(result, Err(LinkageError::EmptyInput)));
 }
@@ -30,6 +33,9 @@ fn handle_correct_input_with_match_and_no_match() {
     let server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
+    let client_party = LinkageParty::new("client.example.com".to_string(), client_key);
+    let server_party = LinkageParty::new("server.example.com".to_string(), server_key);
+
     // Create test data with the same key
     let plaintexts = [
         b"learning_rust".to_vec(),
@@ -40,7 +46,7 @@ fn handle_correct_input_with_match_and_no_match() {
     let encrypted_server_ids: Vec<RecordId> = plaintexts
         .iter()
         .map(|plaintext| {
-            let encrypted = encrypt_data_to_base64(&rand, &server_key, plaintext)
+            let encrypted = encrypt_data_to_base64(&rand, &server_party.secret_key, plaintext)
                 .expect("Encryption should succeed");
             RecordId(encrypted)
         })
@@ -93,9 +99,8 @@ fn handle_correct_input_with_match_and_no_match() {
         encrypted_server_ids,
     );
 
-    let linkage_result =
-        compute_linkage(&rand, &client_key, &server_key, &client_data, &server_data)
-            .expect("Should succeed");
+    let linkage_result = compute_linkage(&client_party, &server_party, &client_data, &server_data)
+        .expect("Should succeed");
 
     // Verify we have exactly 3 results
     assert_eq!(linkage_result.0.len(), 3);
@@ -138,15 +143,17 @@ fn fail_with_wrong_key() {
     let wrong_server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
+    let client_party = LinkageParty::new("client.example.com".to_string(), client_key);
+    let wrong_server_party = LinkageParty::new("server.example.com".to_string(), wrong_server_key);
+
     let encrypted = encrypt_data_to_base64(&rand, &real_server_key, b"test_data")
         .expect("Encryption should succeed");
     let server_id = RecordId(encrypted);
 
     // Test setup - client has WRONG server key
     let linkage_result = compute_linkage(
-        &rand,
-        &client_key,
-        &wrong_server_key, // This should cause decryption failure
+        &client_party,
+        &wrong_server_party, // This should cause decryption failure
         &ClientLinkageData::new(vec![ResultData::new(
             ConfirmedMatchBit(MatchBit::Set),
             TentativeMatchBit(MatchBit::Unset),
@@ -173,6 +180,9 @@ fn fail_with_mismatched_data_length() {
     let rand = SystemRandom::new();
     let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
+
+    let client_party = LinkageParty::new("client.example.com".to_string(), client_key);
+    let server_party = LinkageParty::new("server.example.com".to_string(), server_key);
 
     // Client data has 1 item
     let client_data = ClientLinkageData::new(vec![ResultData::new(
@@ -201,7 +211,7 @@ fn fail_with_mismatched_data_length() {
         ],
     );
 
-    let result = compute_linkage(&rand, &client_key, &server_key, &client_data, &server_data);
+    let result = compute_linkage(&client_party, &server_party, &client_data, &server_data);
 
     assert!(matches!(result, Err(LinkageError::MismatchedDataLength)));
 }
