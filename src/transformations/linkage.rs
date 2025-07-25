@@ -6,13 +6,12 @@ use ring::rand::SystemRandom;
 
 /// Generate a cryptographically secure random linkage ID
 ///
-/// This function should be mapped to a public endpoint
 pub fn generate_random_linkage_id(
-    client_rand: &SystemRandom,
+    rand: &SystemRandom,
     secret_key: &LessSafeKey,
     id_counter: usize,
 ) -> Result<LinkageID, LinkageError> {
-    let (random_nonce_bytes, nonce) = generate_random_nonce(client_rand)?;
+    let (random_nonce_bytes, nonce) = generate_random_nonce(rand)?;
     let payload = generate_payload_from(id_counter);
     let aad = Aad::from(random_nonce_bytes);
     let encrypted_payload = encrypt_payload(&secret_key, nonce, aad, payload)?;

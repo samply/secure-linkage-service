@@ -1,8 +1,25 @@
 pub mod crypto;
 pub mod linkage;
 use crate::domain::*;
-use crate::transformations::linkage::generate_computed_linkage_ids;
+use crate::transformations::linkage::{generate_computed_linkage_ids, generate_random_linkage_id};
 use ring::rand::SystemRandom;
+
+/// Compute N random linkage IDs
+///
+/// This function should be linked to an endpoint
+pub fn compute_random_linkage_ids(
+    party: &LinkageParty,
+    n: usize,
+) -> Result<Vec<LinkageID>, LinkageError> {
+    let rand = SystemRandom::new();
+
+    // Implementing the Clojure logic:
+    // (map generate_random_linkage_id (repeat rand) (repeat party.secret_key) (range n))
+    // with (range n) acting as the counter sequence from 0 to n-1
+    (0..n)
+        .map(|id_counter| generate_random_linkage_id(&rand, &party.secret_key, id_counter))
+        .collect()
+}
 
 /// Compute linkage between client and server data
 /// Returns a LinkageResult containing Option<LinkageID> for each record
