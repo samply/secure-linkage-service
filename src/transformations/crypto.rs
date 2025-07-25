@@ -3,7 +3,7 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use ring::aead::*;
 use ring::rand::{SecureRandom, SystemRandom};
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub fn encrypt_data_to_base64(
     rand: &SystemRandom,
@@ -17,7 +17,7 @@ pub fn encrypt_data_to_base64(
         .map_err(|_| LinkageError::CannotEncryptPayload)?;
     let combined = combine_nonce_and_payload(&nonce_bytes, &data);
     let encoded = BASE64_STANDARD.encode(&combined);
-    Ok(Base64EncodedString(Rc::from(encoded))) // Wrap String in Base64EncodedString
+    Ok(Base64EncodedString(Arc::from(encoded)))
 }
 
 pub fn decrypt_data_from_base64(

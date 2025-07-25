@@ -3,7 +3,7 @@ use base64::{DecodeError, Engine};
 use ring::aead::LessSafeKey;
 use std::fmt;
 use std::num::ParseIntError;
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MatchBit {
@@ -45,16 +45,16 @@ pub struct ConfirmedMatchBit(pub MatchBit);
 pub struct IndexOfBestMatch(pub u64);
 
 //
-// String-containing types using Rc<str> for efficient sharing
+// String-containing types using Arc<str> for thread-safe sharing
 //
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Base64EncodedString(pub Rc<str>);
+pub struct Base64EncodedString(pub Arc<str>);
 
 impl Base64EncodedString {
     pub fn new(value: &str) -> Result<Self, LinkageError> {
         BASE64_STANDARD.decode(value)?;
-        Ok(Self(Rc::from(value)))
+        Ok(Self(Arc::from(value)))
     }
 
     pub fn as_bytes(&self) -> &[u8] {
@@ -151,41 +151,41 @@ impl fmt::Display for ResultData {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClientLinkageData {
-    pub share_data: Rc<Vec<ResultData>>,
+    pub share_data: Arc<Vec<ResultData>>,
 }
 
 impl ClientLinkageData {
     pub fn new(share_data: Vec<ResultData>) -> Self {
         Self {
-            share_data: Rc::new(share_data),
+            share_data: Arc::new(share_data),
         }
     }
 
     pub fn empty() -> Self {
         Self {
-            share_data: Rc::new(Vec::new()),
+            share_data: Arc::new(Vec::new()),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServerLinkageData {
-    pub share_data: Rc<Vec<ResultData>>,
-    pub record_ids: Rc<Vec<RecordId>>,
+    pub share_data: Arc<Vec<ResultData>>,
+    pub record_ids: Arc<Vec<RecordId>>,
 }
 
 impl ServerLinkageData {
     pub fn new(share_data: Vec<ResultData>, record_ids: Vec<RecordId>) -> Self {
         Self {
-            share_data: Rc::new(share_data),
-            record_ids: Rc::new(record_ids),
+            share_data: Arc::new(share_data),
+            record_ids: Arc::new(record_ids),
         }
     }
 
     pub fn empty() -> Self {
         Self {
-            share_data: Rc::new(Vec::new()),
-            record_ids: Rc::new(Vec::new()),
+            share_data: Arc::new(Vec::new()),
+            record_ids: Arc::new(Vec::new()),
         }
     }
 
