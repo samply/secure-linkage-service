@@ -21,8 +21,8 @@ fn handle_empty_input() {
     let server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
-    let client_party = LinkageParty::new("client.example.com".to_string(), client_key);
-    let server_party = LinkageParty::new("server.example.com".to_string(), server_key);
+    let client_party = LinkageParty::new(HostName("client.example.com".to_string()), client_key);
+    let server_party = LinkageParty::new(HostName("server.example.com".to_string()), server_key);
 
     let result = compute_linkage(&client_party, &server_party, &client_data, &server_data);
 
@@ -36,8 +36,8 @@ fn handle_correct_input_with_match_and_no_match() {
     let server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
-    let client_party = LinkageParty::new("client.example.com".to_string(), client_key);
-    let server_party = LinkageParty::new("server.example.com".to_string(), server_key);
+    let client_party = LinkageParty::new(HostName("client.example.com".to_string()), client_key);
+    let server_party = LinkageParty::new(HostName("server.example.com".to_string()), server_key);
 
     // Create test data with the same key
     let plaintexts = [
@@ -146,8 +146,9 @@ fn fail_with_wrong_key() {
     let wrong_server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
-    let client_party = LinkageParty::new("client.example.com".to_string(), client_key);
-    let wrong_server_party = LinkageParty::new("server.example.com".to_string(), wrong_server_key);
+    let client_party = LinkageParty::new(HostName("client.example.com".to_string()), client_key);
+    let wrong_server_party =
+        LinkageParty::new(HostName("server.example.com".to_string()), wrong_server_key);
 
     let encrypted = encrypt_data_to_base64(&rand, &real_server_key, b"test_data")
         .expect("Encryption should succeed");
@@ -184,8 +185,8 @@ fn fail_with_mismatched_data_length() {
     let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
-    let client_party = LinkageParty::new("client.example.com".to_string(), client_key);
-    let server_party = LinkageParty::new("server.example.com".to_string(), server_key);
+    let client_party = LinkageParty::new(HostName("client.example.com".to_string()), client_key);
+    let server_party = LinkageParty::new(HostName("server.example.com".to_string()), server_key);
 
     // Client data has 1 item
     let client_data = ClientLinkageData::new(vec![ResultData::new(
@@ -250,8 +251,8 @@ fn matchbit_conversion_all_combinations_regression_test() {
     let server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
-    let client_party = LinkageParty::new("client.example.com".to_string(), client_key);
-    let server_party = LinkageParty::new("server.example.com".to_string(), server_key);
+    let client_party = LinkageParty::new(HostName("client.example.com".to_string()), client_key);
+    let server_party = LinkageParty::new(HostName("server.example.com".to_string()), server_key);
 
     // Create test data
     let test_plaintext = b"test_record_for_all_combinations".to_vec();
@@ -320,8 +321,8 @@ fn matchbit_conversion_runtime_regression_test() {
     let server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
-    let client_party = LinkageParty::new("client.example.com".to_string(), client_key);
-    let server_party = LinkageParty::new("server.example.com".to_string(), server_key);
+    let client_party = LinkageParty::new(HostName("client.example.com".to_string()), client_key);
+    let server_party = LinkageParty::new(HostName("server.example.com".to_string()), server_key);
 
     // Create a known plaintext that we can verify later
     let known_plaintext = b"regression_test_data";
@@ -414,8 +415,14 @@ fn matchbit_conversion_payload_content_verification() {
     let server_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let client_key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
-    let client_party = LinkageParty::new("client.example.com".to_string(), client_key.clone());
-    let server_party = LinkageParty::new("server.example.com".to_string(), server_key.clone());
+    let client_party = LinkageParty::new(
+        HostName("client.example.com".to_string()),
+        client_key.clone(),
+    );
+    let server_party = LinkageParty::new(
+        HostName("server.example.com".to_string()),
+        server_key.clone(),
+    );
 
     // Create test data with a simple known plaintext
     let test_plaintext = b"simple_test";

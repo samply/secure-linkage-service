@@ -11,7 +11,7 @@ use secure_linkage_service::{
 fn generate_zero_linkage_ids() {
     let rand = SystemRandom::new();
     let key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
-    let party = LinkageParty::new("test.example.com".to_string(), key);
+    let party = LinkageParty::new(HostName("test.example.com".to_string()), key);
 
     let result = compute_random_linkage_ids(&party, 0).expect("Should succeed with n=0");
 
@@ -22,7 +22,7 @@ fn generate_zero_linkage_ids() {
 fn generate_single_linkage_id() {
     let rand = SystemRandom::new();
     let key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
-    let party = LinkageParty::new("test.example.com".to_string(), key);
+    let party = LinkageParty::new(HostName("test.example.com".to_string()), key);
 
     let result = compute_random_linkage_ids(&party, 1).expect("Should succeed with n=1");
 
@@ -50,7 +50,7 @@ fn generate_single_linkage_id() {
 fn generate_multiple_linkage_ids() {
     let rand = SystemRandom::new();
     let key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
-    let party = LinkageParty::new("test.example.com".to_string(), key);
+    let party = LinkageParty::new(HostName("test.example.com".to_string()), key);
 
     let n = 5;
     let result = compute_random_linkage_ids(&party, n).expect("Should succeed with n=5");
@@ -81,7 +81,7 @@ fn generate_multiple_linkage_ids() {
 fn generate_linkage_ids_are_unique() {
     let rand = SystemRandom::new();
     let key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
-    let party = LinkageParty::new("test.example.com".to_string(), key);
+    let party = LinkageParty::new(HostName("test.example.com".to_string()), key);
 
     let n = 10;
     let result = compute_random_linkage_ids(&party, n).expect("Should succeed");
@@ -107,8 +107,8 @@ fn generate_linkage_ids_with_different_parties_are_different() {
     let key1 = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let key2 = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 
-    let party1 = LinkageParty::new("party1.example.com".to_string(), key1);
-    let party2 = LinkageParty::new("party2.example.com".to_string(), key2);
+    let party1 = LinkageParty::new(HostName("party1.example.com".to_string()), key1);
+    let party2 = LinkageParty::new(HostName("party2.example.com".to_string()), key2);
 
     let n = 3;
     let result1 = compute_random_linkage_ids(&party1, n).expect("Should succeed for party1");
@@ -132,7 +132,7 @@ fn generate_linkage_ids_with_different_parties_are_different() {
 fn generate_large_number_of_linkage_ids() {
     let rand = SystemRandom::new();
     let key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
-    let party = LinkageParty::new("test.example.com".to_string(), key);
+    let party = LinkageParty::new(HostName("test.example.com".to_string()), key);
 
     let n = 100;
     let result = compute_random_linkage_ids(&party, n).expect("Should succeed with large n");
@@ -159,7 +159,7 @@ fn generate_large_number_of_linkage_ids() {
 fn generate_linkage_ids_with_same_party_multiple_calls_are_different() {
     let rand = SystemRandom::new();
     let key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
-    let party = LinkageParty::new("test.example.com".to_string(), key);
+    let party = LinkageParty::new(HostName("test.example.com".to_string()), key);
 
     // Generate IDs twice with the same party
     let result1 = compute_random_linkage_ids(&party, 3).expect("Should succeed on first call");

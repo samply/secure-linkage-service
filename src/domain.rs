@@ -222,12 +222,12 @@ impl fmt::Display for HostName {
 
 #[derive(Debug, Clone)]
 pub struct LinkageParty {
-    pub hostname: String,
+    pub hostname: HostName,
     pub secret_key: LessSafeKey,
 }
 
 impl LinkageParty {
-    pub fn new(hostname: String, secret_key: LessSafeKey) -> Self {
+    pub fn new(hostname: HostName, secret_key: LessSafeKey) -> Self {
         Self {
             hostname,
             secret_key,
