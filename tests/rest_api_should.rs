@@ -1,494 +1,264 @@
-use axum::{
-    Router,
-    body::Body,
-    http::{Request, StatusCode},
+mod common;
+
+use base64::Engine;
+use base64::prelude::BASE64_STANDARD;
+use common::TestSetup;
+use secure_linkage_service::{
+    domain::*,
+    transformations::{
+        compute_linkage,
+        crypto::{
+            decrypt_data_from_base64, encrypt_data_to_base64, generate_key,
+            generate_random_key_material,
+        },
+    },
 };
-use ring::rand::SystemRandom;
-use serde_json::json;
-use tokio::time::Duration;
-use tower::ServiceExt;
 
-use secure_linkage_service::rest_api::{AppState, LinkageResponse, handle_linkage_request};
-use secure_linkage_service::transformations::crypto::encrypt_data_to_base64;
+#[test]
+fn handle_empty_input() {
+    let setup = TestSetup::new();
+    let client_data = ClientLinkageData::empty();
+    let server_data = ServerLinkageData::empty();
 
-fn create_test_app() -> Router {
-    let state = AppState::new();
-    Router::new()
-        .route(
-            "/linkageResult/{source_party}/{destination_party}",
-            axum::routing::post(handle_linkage_request),
-        )
-        .with_state(state)
+    let result = compute_linkage(
+        &setup.client_party,
+        &setup.server_party,
+        &client_data,
+        &server_data,
+    );
+    assert!(matches!(result, Err(LinkageError::EmptyInput)));
 }
 
-fn create_test_app_with_timeout(timeout: Duration) -> Router {
-    let state = AppState::with_timeout(timeout);
-    Router::new()
-        .route(
-            "/linkageResult/{source_party}/{destination_party}",
-            axum::routing::post(handle_linkage_request),
-        )
-        .with_state(state)
-}
+#[test]
+fn handle_correct_input_with_matches() {
+    let setup = TestSetup::new();
 
-#[tokio::test]
-async fn server_request_returns_200_immediately() {
-    let app = create_test_app();
+    let plaintexts: &[&[u8]] = &[
+        b"learning_rust",
+        b"functional_programming",
+        b"medical_informatics",
+    ];
+    let encrypted_server_ids = setup.create_encrypted_ids(plaintexts);
 
-    let server_request = json!({
-        "role": "server",
-        "result": [
-            {
-                "match": 0,
-                "tentativeMatch": 1,
-                "bestIndex": 2
-            },
-            {
-                "match": 1,
-                "tentativeMatch": 0,
-                "bestIndex": 0
-            },
-            {
-                "match": 0,
-                "tentativeMatch": 0,
-                "bestIndex": 4
-            }
-        ],
-        "ids": ["aGVsbG93b3JsZA==", "ZGF0YXNjaWVuY2U=", "cHl0aG9uaXNmdW4="]
-    });
+    // Client data that will produce XOR matches with server data
+    let client_data = ClientLinkageData::new(setup.create_test_data(
+        &[MatchBit::Set, MatchBit::Unset, MatchBit::Unset],
+        &[MatchBit::Unset, MatchBit::Set, MatchBit::Unset],
+        &[0, 1, 2],
+    ));
 
-    let request = Request::builder()
-        .method("POST")
-        .uri("/linkageResult/dkfz/tuda")
-        .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_vec(&server_request).unwrap()))
-        .unwrap();
-
-    let response = app.oneshot(request).await.unwrap();
-
-    assert_eq!(response.status(), StatusCode::OK);
-
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let response_json: LinkageResponse = serde_json::from_slice(&body).unwrap();
-
-    assert_eq!(response_json.status, "accepted");
-    assert!(response_json.message.is_some());
-    assert!(response_json.linkage_ids.is_none());
-}
-
-#[tokio::test]
-async fn client_request_waits_and_times_out() {
-    // Use 2 second timeout for tests
-    let app = create_test_app_with_timeout(Duration::from_secs(2));
-
-    let client_request = json!({
-        "role": "client",
-        "result": [
-            {
-                "match": 1,
-                "tentativeMatch": 0,
-                "bestIndex": 2
-            },
-            {
-                "match": 0,
-                "tentativeMatch": 1,
-                "bestIndex": 0
-            },
-            {
-                "match": 1,
-                "tentativeMatch": 1,
-                "bestIndex": 4
-            }
-        ]
-    });
-
-    let request = Request::builder()
-        .method("POST")
-        .uri("/linkageResult/tuda/dkfz")
-        .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_vec(&client_request).unwrap()))
-        .unwrap();
-
-    let start = std::time::Instant::now();
-    let response = app.oneshot(request).await.unwrap();
-    let duration = start.elapsed();
-
-    // Should timeout after approximately 2 seconds
-    assert!(duration.as_secs() >= 1);
-    // Allow some margin for test timing
-    assert!(duration.as_secs() < 4);
-    assert_eq!(response.status(), StatusCode::REQUEST_TIMEOUT);
-
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let response_json: LinkageResponse = serde_json::from_slice(&body).unwrap();
-
-    assert_eq!(response_json.status, "timeout");
-    assert!(response_json.linkage_ids.is_none());
-}
-
-#[tokio::test]
-async fn successful_linkage_computation() {
-    // Create shared state and get the server key that will be used
-    let state = AppState::new();
-    let parties = state.parties.read().await;
-    let server_party = parties.get("dkfz").unwrap();
-    let server_key = &server_party.secret_key;
-
-    // Create properly encrypted IDs using the same key the system will use
-    let rand = SystemRandom::new();
-    let encrypted_id1 = encrypt_data_to_base64(&rand, server_key, b"helloworld").unwrap();
-    let encrypted_id2 = encrypt_data_to_base64(&rand, server_key, b"datascience").unwrap();
-    let encrypted_id3 = encrypt_data_to_base64(&rand, server_key, b"pythonisfun").unwrap();
-    drop(parties);
-
-    let server_request = json!({
-        "role": "server",
-        "result": [
-            {
-                "match": 0,
-                "tentativeMatch": 1,
-                "bestIndex": 0
-            },
-            {
-                "match": 1,
-                "tentativeMatch": 0,
-                "bestIndex": 1
-            },
-            {
-                "match": 0,
-                "tentativeMatch": 0,
-                "bestIndex": 2
-            }
-        ],
-        "ids": [encrypted_id1.0.as_ref(), encrypted_id2.0.as_ref(), encrypted_id3.0.as_ref()]
-    });
-
-    let client_request = json!({
-        "role": "client",
-        "result": [
-            {
-                "match": 1,
-                "tentativeMatch": 0,
-                "bestIndex": 0
-            },
-            {
-                "match": 0,
-                "tentativeMatch": 1,
-                "bestIndex": 1
-            },
-            {
-                "match": 0,
-                "tentativeMatch": 0,
-                "bestIndex": 2
-            }
-        ]
-    });
-
-    // Create a shared state that both requests will use
-    let app1 = Router::new()
-        .route(
-            "/linkageResult/{source_party}/{destination_party}",
-            axum::routing::post(handle_linkage_request),
-        )
-        .with_state(state.clone());
-
-    let app2 = Router::new()
-        .route(
-            "/linkageResult/{source_party}/{destination_party}",
-            axum::routing::post(handle_linkage_request),
-        )
-        .with_state(state);
-
-    let server_req = Request::builder()
-        .method("POST")
-        .uri("/linkageResult/dkfz/tuda")
-        .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_vec(&server_request).unwrap()))
-        .unwrap();
-
-    let client_req = Request::builder()
-        .method("POST")
-        .uri("/linkageResult/tuda/dkfz")
-        .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_vec(&client_request).unwrap()))
-        .unwrap();
-
-    // Send both requests concurrently with a small delay to ensure proper order
-    let (server_response, client_response) = tokio::join!(app1.oneshot(server_req), async {
-        // Small delay to ensure server request is processed first
-        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-        app2.oneshot(client_req).await
-    });
-
-    let server_resp = server_response.unwrap();
-    let client_resp = client_response.unwrap();
-
-    // Check status codes first
-    let server_status = server_resp.status();
-    let client_status = client_resp.status();
-
-    assert_eq!(server_status, StatusCode::OK);
-
-    // Debug the client response if it's not 200
-    if client_status != StatusCode::OK {
-        let body = axum::body::to_bytes(client_resp.into_body(), usize::MAX)
-            .await
-            .unwrap();
-        let response_json: LinkageResponse = serde_json::from_slice(&body).unwrap();
-        eprintln!("Client response status: {:?}", client_status);
-        eprintln!("Client response: {:?}", response_json);
-        panic!("Expected 200, got {}", client_status.as_u16());
-    }
-
-    assert_eq!(client_status, StatusCode::OK);
-
-    // Check server response (should be "accepted")
-    let server_body = axum::body::to_bytes(server_resp.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let server_json: LinkageResponse = serde_json::from_slice(&server_body).unwrap();
-    assert_eq!(server_json.status, "accepted");
-
-    // Check client response (should be "completed" with linkage IDs)
-    let client_body = axum::body::to_bytes(client_resp.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let client_json: LinkageResponse = serde_json::from_slice(&client_body).unwrap();
-
-    assert_eq!(client_json.status, "completed");
-    assert!(client_json.linkage_ids.is_some());
-
-    let linkage_ids = client_json.linkage_ids.unwrap();
-    assert_eq!(linkage_ids.len(), 3);
-
-    // First two should have linkage IDs (matches), last one should also have an ID (random)
-    for id in &linkage_ids {
-        assert!(id.is_some());
-    }
-}
-
-#[tokio::test]
-async fn invalid_party_returns_400() {
-    let app = create_test_app();
-
-    let request_data = json!({
-        "role": "server",
-        "result": [
-            {
-                "match": 0,
-                "tentativeMatch": 1,
-                "bestIndex": 2
-            }
-        ],
-        "ids": ["aGVsbG93b3JsZA=="]
-    });
-
-    let request = Request::builder()
-        .method("POST")
-        .uri("/linkageResult/invalid_party/tuda")
-        .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_vec(&request_data).unwrap()))
-        .unwrap();
-
-    let response = app.oneshot(request).await.unwrap();
-    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-}
-
-#[tokio::test]
-async fn concurrent_requests_handled_correctly() {
-    // Create shared state and get the server key
-    let state = AppState::new();
-    let parties = state.parties.read().await;
-    let server_party = parties.get("dkfz").unwrap();
-    let server_key = &server_party.secret_key;
-
-    // Create properly encrypted ID using the same key the system will use
-    let rand = SystemRandom::new();
-    let encrypted_id = encrypt_data_to_base64(&rand, server_key, b"helloworld").unwrap();
-    drop(parties);
-
-    let server_request = json!({
-        "role": "server",
-        "result": [
-            {
-                "match": 0,
-                "tentativeMatch": 1,
-                "bestIndex": 0
-            }
-        ],
-        "ids": [encrypted_id.0.as_ref()]
-    });
-
-    let client_request = json!({
-        "role": "client",
-        "result": [
-            {
-                "match": 1,
-                "tentativeMatch": 0,
-                "bestIndex": 0
-            }
-        ]
-    });
-
-    // Send both requests concurrently with proper timing
-    let server_req = Request::builder()
-        .method("POST")
-        .uri("/linkageResult/dkfz/tuda")
-        .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_vec(&server_request).unwrap()))
-        .unwrap();
-
-    let client_req = Request::builder()
-        .method("POST")
-        .uri("/linkageResult/tuda/dkfz")
-        .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_vec(&client_request).unwrap()))
-        .unwrap();
-
-    // Send both requests concurrently with a small delay to ensure server goes first
-    let (server_response, client_response) = tokio::join!(
-        Router::new()
-            .route(
-                "/linkageResult/{source_party}/{destination_party}",
-                axum::routing::post(handle_linkage_request),
-            )
-            .with_state(state.clone())
-            .oneshot(server_req),
-        async {
-            // Small delay to ensure server request is processed first
-            tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-            Router::new()
-                .route(
-                    "/linkageResult/{source_party}/{destination_party}",
-                    axum::routing::post(handle_linkage_request),
-                )
-                .with_state(state)
-                .oneshot(client_req)
-                .await
-        }
+    // Server data that will XOR with client to produce matches
+    let server_data = ServerLinkageData::new(
+        setup.create_test_data(
+            &[MatchBit::Unset, MatchBit::Set, MatchBit::Unset],
+            &[MatchBit::Set, MatchBit::Unset, MatchBit::Unset],
+            &[0, 1, 2],
+        ),
+        encrypted_server_ids,
     );
 
-    let server_resp = server_response.unwrap();
-    let client_resp = client_response.unwrap();
+    let result = compute_linkage(
+        &setup.client_party,
+        &setup.server_party,
+        &client_data,
+        &server_data,
+    )
+    .expect("Should succeed");
 
-    assert_eq!(server_resp.status(), StatusCode::OK);
-    assert_eq!(client_resp.status(), StatusCode::OK);
+    assert_eq!(result.0.len(), 3);
 
-    // Check that both got successful responses
-    let server_body = axum::body::to_bytes(server_resp.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let client_body = axum::body::to_bytes(client_resp.into_body(), usize::MAX)
-        .await
-        .unwrap();
+    // First two should be match-based IDs (longer)
+    for i in 0..2 {
+        let id = result.0[i].as_ref().expect("Should have linkage ID");
+        assert!(!id.0.0.contains("ERROR"));
+        assert!(id.0.0.len() > 50, "Match ID should be longer");
+    }
 
-    let server_json: LinkageResponse = serde_json::from_slice(&server_body).unwrap();
-    let client_json: LinkageResponse = serde_json::from_slice(&client_body).unwrap();
-
-    // Server should return "accepted" since it's the first to arrive and waits
-    assert_eq!(server_json.status, "accepted");
-    assert!(server_json.linkage_ids.is_none());
-
-    // Client should return "completed" with linkage IDs since it triggers the computation
-    assert_eq!(client_json.status, "completed");
-    assert!(client_json.linkage_ids.is_some());
-
-    let linkage_ids = client_json.linkage_ids.unwrap();
-    assert_eq!(linkage_ids.len(), 1);
-    assert!(linkage_ids[0].is_some());
+    // Last one should be random ID (shorter)
+    let random_id = result.0[2].as_ref().expect("Should have random ID");
+    assert!(!random_id.0.0.contains("ERROR"));
+    assert!(
+        random_id.0.0.len() > 20 && random_id.0.0.len() < 50,
+        "Random ID should be shorter"
+    );
 }
 
-#[tokio::test]
-async fn mismatched_data_length_returns_error() {
-    // Create shared state that both requests will use
-    let state = AppState::new();
+#[test]
+fn fail_with_wrong_decryption_key() {
+    let setup = TestSetup::new();
+    let wrong_key = generate_key(generate_random_key_material(&setup.rand).unwrap()).unwrap();
+    let wrong_server_party =
+        LinkageParty::new(HostName("server.example.com".to_string()), wrong_key);
 
-    let server_request = json!({
-        "role": "server",
-        "result": [
-            {
-                "match": 0,
-                "tentativeMatch": 1,
-                "bestIndex": 0
-            },
-            {
-                "match": 1,
-                "tentativeMatch": 0,
-                "bestIndex": 1
-            }
+    let encrypted =
+        encrypt_data_to_base64(&setup.rand, &setup.server_party.secret_key, b"test_data")
+            .expect("Encryption should succeed");
+    let server_id = RecordId(encrypted);
+
+    let client_data = ClientLinkageData::new(vec![ResultData::new(
+        ConfirmedMatchBit(MatchBit::Set),
+        TentativeMatchBit(MatchBit::Unset),
+        IndexOfBestMatch(0),
+    )]);
+
+    let server_data = ServerLinkageData::new(
+        vec![ResultData::new(
+            ConfirmedMatchBit(MatchBit::Unset),
+            TentativeMatchBit(MatchBit::Set),
+            IndexOfBestMatch(0),
+        )],
+        vec![server_id],
+    );
+
+    let result = compute_linkage(
+        &setup.client_party,
+        &wrong_server_party,
+        &client_data,
+        &server_data,
+    );
+    assert!(matches!(result, Err(LinkageError::DecryptionFailed(_))));
+}
+
+#[test]
+fn fail_with_mismatched_data_length() {
+    let setup = TestSetup::new();
+
+    let client_data = ClientLinkageData::new(vec![ResultData::new(
+        ConfirmedMatchBit(MatchBit::Set),
+        TentativeMatchBit(MatchBit::Unset),
+        IndexOfBestMatch(0),
+    )]);
+
+    let server_data = ServerLinkageData::new(
+        setup.create_test_data(
+            &[MatchBit::Unset, MatchBit::Set],
+            &[MatchBit::Set, MatchBit::Unset],
+            &[0, 1],
+        ),
+        vec![
+            RecordId::new(&BASE64_STANDARD.encode(b"record1")).unwrap(),
+            RecordId::new(&BASE64_STANDARD.encode(b"record2")).unwrap(),
         ],
-        "ids": ["aGVsbG93b3JsZA==", "ZGF0YXNjaWVuY2U="]
-    });
+    );
 
-    let client_request = json!({
-        "role": "client",
-        "result": [
-            {
-                "match": 1,
-                "tentativeMatch": 0,
-                "bestIndex": 0
-            }
-        ]
-    });
+    let result = compute_linkage(
+        &setup.client_party,
+        &setup.server_party,
+        &client_data,
+        &server_data,
+    );
+    assert!(matches!(result, Err(LinkageError::MismatchedDataLength)));
+}
 
-    // Create apps with shared state
-    let app1 = Router::new()
-        .route(
-            "/linkageResult/{source_party}/{destination_party}",
-            axum::routing::post(handle_linkage_request),
+#[test]
+fn crypto_roundtrip_verification() {
+    let setup = TestSetup::new();
+    let test_plaintext = b"crypto_test_data";
+
+    let encrypted =
+        encrypt_data_to_base64(&setup.rand, &setup.server_party.secret_key, test_plaintext)
+            .expect("Encryption should succeed");
+    let decrypted = decrypt_data_from_base64(&setup.server_party.secret_key, &encrypted)
+        .expect("Decryption should succeed");
+
+    assert_eq!(decrypted, test_plaintext);
+}
+
+#[test]
+fn matchbit_combinations_regression_test() {
+    let setup = TestSetup::new();
+    let test_plaintext = b"matchbit_test_data";
+    let encrypted_id =
+        encrypt_data_to_base64(&setup.rand, &setup.server_party.secret_key, test_plaintext)
+            .expect("Encryption should succeed");
+    let server_id = RecordId(encrypted_id);
+
+    let test_combinations = [
+        (MatchBit::Unset, MatchBit::Unset),
+        (MatchBit::Unset, MatchBit::Set),
+        (MatchBit::Set, MatchBit::Unset),
+        (MatchBit::Set, MatchBit::Set),
+    ];
+
+    for (client_tentative, server_tentative) in test_combinations {
+        let client_data = ClientLinkageData::new(vec![ResultData::new(
+            ConfirmedMatchBit(MatchBit::Set),
+            TentativeMatchBit(client_tentative),
+            IndexOfBestMatch(0),
+        )]);
+
+        let server_data = ServerLinkageData::new(
+            vec![ResultData::new(
+                ConfirmedMatchBit(MatchBit::Unset),
+                TentativeMatchBit(server_tentative),
+                IndexOfBestMatch(0),
+            )],
+            vec![server_id.clone()],
+        );
+
+        let result = compute_linkage(
+            &setup.client_party,
+            &setup.server_party,
+            &client_data,
+            &server_data,
         )
-        .with_state(state.clone());
+        .expect(&format!(
+            "Should succeed for {:?}, {:?}",
+            client_tentative, server_tentative
+        ));
 
-    let app2 = Router::new()
-        .route(
-            "/linkageResult/{source_party}/{destination_party}",
-            axum::routing::post(handle_linkage_request),
-        )
-        .with_state(state);
+        assert_eq!(result.0.len(), 1);
+        let linkage_id = result.0[0].as_ref().expect("Should have linkage ID");
+        assert!(!linkage_id.0.0.is_empty());
+        assert!(!linkage_id.0.0.contains("ERROR"));
+    }
+}
 
-    // Send server request first
-    let server_req = Request::builder()
-        .method("POST")
-        .uri("/linkageResult/dkfz/tuda")
-        .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_vec(&server_request).unwrap()))
-        .unwrap();
+#[test]
+fn payload_prefix_verification() {
+    let setup = TestSetup::new();
+    let test_plaintext = b"prefix_test";
+    let encrypted_id =
+        encrypt_data_to_base64(&setup.rand, &setup.server_party.secret_key, test_plaintext)
+            .expect("Encryption should succeed");
+    let server_id = RecordId(encrypted_id);
 
-    let server_response = app1.oneshot(server_req).await.unwrap();
-    assert_eq!(server_response.status(), StatusCode::OK);
+    // Test case where XOR produces match with tentative_match = 1
+    let client_data = ClientLinkageData::new(vec![ResultData::new(
+        ConfirmedMatchBit(MatchBit::Set),
+        TentativeMatchBit(MatchBit::Set),
+        IndexOfBestMatch(0),
+    )]);
 
-    // Send client request with mismatched length
-    let client_req = Request::builder()
-        .method("POST")
-        .uri("/linkageResult/tuda/dkfz")
-        .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_vec(&client_request).unwrap()))
-        .unwrap();
+    let server_data = ServerLinkageData::new(
+        vec![ResultData::new(
+            ConfirmedMatchBit(MatchBit::Unset),
+            TentativeMatchBit(MatchBit::Unset),
+            IndexOfBestMatch(0),
+        )],
+        vec![server_id],
+    );
 
-    let client_response = app2.oneshot(client_req).await.unwrap();
-    assert_eq!(client_response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let result = compute_linkage(
+        &setup.client_party,
+        &setup.server_party,
+        &client_data,
+        &server_data,
+    )
+    .expect("Should succeed");
 
-    let body = axum::body::to_bytes(client_response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let response_json: LinkageResponse = serde_json::from_slice(&body).unwrap();
+    let linkage_id = result.0[0].as_ref().expect("Should have linkage ID");
+    let decrypted_payload = decrypt_data_from_base64(&setup.client_party.secret_key, &linkage_id.0)
+        .expect("Should decrypt with client key");
 
-    assert_eq!(response_json.status, "error");
-    assert!(response_json.message.is_some());
-
-    // Check that we got an error message that indicates data length mismatch
-    let error_message = response_json.message.unwrap();
-    let has_length_related_error = error_message.to_lowercase().contains("length")
-        || error_message.to_lowercase().contains("mismatch")
-        || error_message.to_lowercase().contains("different");
-
-    assert!(
-        has_length_related_error,
-        "Error message should indicate a length/mismatch issue, but got: '{}'",
-        error_message
+    assert!(!decrypted_payload.is_empty());
+    assert_eq!(
+        decrypted_payload[0], 1u8,
+        "First byte should be XOR result of tentative_match (1)"
+    );
+    assert_eq!(
+        &decrypted_payload[1..],
+        test_plaintext,
+        "Rest should be original server data"
     );
 }
