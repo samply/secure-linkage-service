@@ -86,7 +86,6 @@ fn generate_linkage_ids_are_unique() {
     let n = 10;
     let result = compute_random_linkage_ids(&party, n).expect("Should succeed");
 
-    // Collect all linkage ID strings
     let id_strings: Vec<&str> = result.iter().map(|id| id.0.0.as_ref()).collect();
 
     // Check that all IDs are unique
@@ -105,7 +104,6 @@ fn generate_linkage_ids_are_unique() {
 fn generate_linkage_ids_with_different_parties_are_different() {
     let rand = SystemRandom::new();
 
-    // Create two different parties with different keys
     let key1 = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
     let key2 = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
 

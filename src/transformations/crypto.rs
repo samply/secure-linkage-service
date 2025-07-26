@@ -24,8 +24,8 @@ pub fn decrypt_data_from_base64(
     key: &LessSafeKey,
     base64_str: &Base64EncodedString,
 ) -> Result<Vec<u8>, LinkageError> {
-    let base64_str_ref: &str = base64_str.0.as_ref(); // Convert Rc<str> to &str
-    let decoded_bytes = BASE64_STANDARD.decode(base64_str_ref)?; // Use the string reference
+    let base64_str_ref: &str = base64_str.0.as_ref();
+    let decoded_bytes = BASE64_STANDARD.decode(base64_str_ref)?;
     if decoded_bytes.len() < NONCE_LEN {
         return Err(LinkageError::DecodedIdTooShort);
     }
