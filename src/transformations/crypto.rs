@@ -36,9 +36,10 @@ pub fn decrypt_data_from_base64(
     let nonce = Nonce::assume_unique_for_key(nonce_bytes);
     let aad = Aad::from(nonce_bytes);
     let mut data = ciphertext.to_vec();
-    key.open_in_place(nonce, aad, &mut data)
+    let plaintext = key
+        .open_in_place(nonce, aad, &mut data)
         .map_err(|e| LinkageError::DecryptionFailed(e.to_string()))?;
-    Ok(data.to_vec())
+    Ok(plaintext.to_vec())
 }
 
 pub fn generate_random_key_material(rand: &SystemRandom) -> Result<[u8; 32], LinkageError> {

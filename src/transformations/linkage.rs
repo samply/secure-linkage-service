@@ -1,6 +1,5 @@
 use crate::domain::*;
 use crate::transformations::crypto::*;
-use base64::prelude::*;
 use ring::aead::*;
 use ring::rand::SystemRandom;
 
@@ -11,21 +10,10 @@ pub fn generate_random_linkage_id(
     secret_key: &LessSafeKey,
     id_counter: usize,
 ) -> Result<LinkageID, LinkageError> {
-    let (random_nonce_bytes, nonce) = generate_random_nonce(rand)?;
     let payload = generate_payload_from(id_counter);
-    let aad = Aad::from(random_nonce_bytes);
-    let encrypted_payload = encrypt_payload(&secret_key, nonce, aad, payload)?;
-    let combined = combine_nonce_and_payload(&random_nonce_bytes, &encrypted_payload);
-    let encoded = BASE64_STANDARD.encode(&combined);
-    Ok(LinkageID::new(&encoded).unwrap())
+    let encrypted_base64_str = encrypt_data_to_base64(rand, secret_key, &payload)?;
+    LinkageID::new(&encrypted_base64_str.0).map_err(|_| LinkageError::InvalidLinkageId)
 }
-
-/// Result type for compute_linkage function
-
-/// Computes linkage between client and server data using an immutable approach
-/// with XChaCha20-Poly1305 encryption. Always returns a vector of results.
-///
-/// Creates appropriate LinkageIDs based on XOR results.
 
 /// Process all XOR results to generate LinkageIDs.
 /// Returns a vector of Option<LinkageID> for each result.
@@ -90,11 +78,13 @@ fn create_match_linkage_id(
     let encrypted_id_from_server = server_ids
         .get(best_index)
         .ok_or(LinkageError::ServerIDNotFoundForBestMatchIndex(best_index))?;
+
     let decrypted_id = decrypt_data_from_base64(server_key, &encrypted_id_from_server.0)?;
 
     // Construct new payload with match bit prefix
     let mut new_payload = Vec::with_capacity(1 + decrypted_id.len());
-    new_payload.push(xor_result.tentative_match.0 as u8);
+    // Convert MatchBit to u64 first, then to u8
+    new_payload.push(xor_result.tentative_match.0.to_u64() as u8);
     new_payload.extend(decrypted_id);
 
     let encrypted_base64_str = encrypt_data_to_base64(client_rand, client_key, &new_payload)?;
