@@ -1,7 +1,7 @@
 use ring::rand::SystemRandom;
 use secure_linkage_service::{
+    core::crypto::{encrypt_data_to_base64, generate_key, generate_random_key_material},
     domain::*,
-    transformations::crypto::{encrypt_data_to_base64, generate_key, generate_random_key_material},
 };
 
 pub struct TestSetup {

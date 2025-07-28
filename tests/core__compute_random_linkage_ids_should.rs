@@ -1,10 +1,10 @@
 use ring::rand::SystemRandom;
 use secure_linkage_service::{
-    domain::*,
-    transformations::{
+    core::{
         compute_random_linkage_ids,
         crypto::{generate_key, generate_random_key_material},
     },
+    domain::*,
 };
 
 #[test]

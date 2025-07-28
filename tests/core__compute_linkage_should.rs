@@ -2,14 +2,14 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use ring::rand::SystemRandom;
 use secure_linkage_service::{
-    domain::*,
-    transformations::{
+    core::{
         compute_linkage,
         crypto::{
             decrypt_data_from_base64, encrypt_data_to_base64, generate_key,
             generate_random_key_material,
         },
     },
+    domain::*,
 };
 
 #[test]
