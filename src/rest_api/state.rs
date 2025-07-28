@@ -1,12 +1,13 @@
 use std::sync::Arc;
 use tokio::time::Duration;
 
-use crate::services::{LinkageService, PartyService};
+use crate::services::{FreshIdsService, LinkageService, PartyService};
 
 #[derive(Debug, Clone)]
 pub struct AppState {
     pub linkage_service: Arc<LinkageService>,
     pub party_service: Arc<PartyService>,
+    pub fresh_ids_service: Arc<FreshIdsService>,
 }
 
 impl AppState {
@@ -18,6 +19,7 @@ impl AppState {
         Self {
             linkage_service: Arc::new(LinkageService::with_timeout(timeout_duration)),
             party_service: Arc::new(PartyService::new()),
+            fresh_ids_service: Arc::new(FreshIdsService::new()),
         }
     }
 }
