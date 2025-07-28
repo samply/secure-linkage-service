@@ -132,144 +132,133 @@ pub async fn handle_linkage_request(
     let dest_party_clone = dest_party_obj.clone();
     drop(parties);
 
-    match request {
-        LinkageRequest::Server(_) => {
-            // Server role request - immediate 200 OK, store for later matching
-            let request_id = format!("{}:{}", source_party, destination_party);
-            let (tx, rx) = oneshot::channel();
+    // CHANGE 1: Create keys for both directions
+    let current_key = format!("{}:{}", source_party, destination_party);
+    let matching_key = format!("{}:{}", destination_party, source_party);
 
-            let pending = PendingRequest {
-                source_party: source_party.clone(),
-                destination_party: destination_party.clone(),
-                data: request,
-                response_sender: tx,
-            };
+    // CHANGE 2: Always check for matching request first (regardless of request type)
+    let mut pending_requests = state.pending_requests.write().await;
 
-            state
+    if let Some(matching_request) = pending_requests.remove(&matching_key) {
+        // Found a match! Process immediately
+        drop(pending_requests);
+
+        // CHANGE 3: Handle both pairing scenarios
+        let result = match (&request, &matching_request.data) {
+            (LinkageRequest::Client(client_req), LinkageRequest::Server(_)) => {
+                perform_linkage(
+                    &source_party_clone,
+                    &dest_party_clone,
+                    client_req,
+                    &matching_request.data,
+                )
+                .await
+            }
+            (LinkageRequest::Server(_), LinkageRequest::Client(client_req)) => {
+                perform_linkage(&dest_party_clone, &source_party_clone, client_req, &request).await
+            }
+            _ => {
+                return Ok((
+                    StatusCode::BAD_REQUEST,
+                    Json(LinkageResponse {
+                        status: "error".to_string(),
+                        linkage_ids: None,
+                        message: Some(
+                            "Invalid request pairing - both requests are the same type".to_string(),
+                        ),
+                    }),
+                ));
+            }
+        };
+
+        match result {
+            Ok(linkage_result) => {
+                let linkage_ids: Vec<Option<String>> = linkage_result
+                    .0
+                    .iter()
+                    .map(|opt_id| opt_id.as_ref().map(|id| id.0.0.to_string()))
+                    .collect();
+
+                let response = LinkageResponse {
+                    status: "completed".to_string(),
+                    linkage_ids: Some(linkage_ids),
+                    message: Some("Linkage computation completed".to_string()),
+                };
+
+                // Send response to the waiting request
+                let _ = matching_request.response_sender.send(response.clone());
+
+                // Return same response to current request
+                Ok((StatusCode::OK, Json(response)))
+            }
+            Err(e) => {
+                let error_response = LinkageResponse {
+                    status: "error".to_string(),
+                    linkage_ids: None,
+                    message: Some(format!("Linkage computation failed: {}", e)),
+                };
+
+                let _ = matching_request
+                    .response_sender
+                    .send(error_response.clone());
+                error!("Linkage computation failed: {}", e);
+                Ok((StatusCode::INTERNAL_SERVER_ERROR, Json(error_response)))
+            }
+        }
+    } else {
+        // CHANGE 4: No match found - store and wait (same logic for both request types)
+        let (tx, rx) = oneshot::channel();
+
+        let pending = PendingRequest {
+            source_party: source_party.clone(),
+            destination_party: destination_party.clone(),
+            data: request,
+            response_sender: tx,
+        };
+
+        pending_requests.insert(current_key.clone(), pending);
+        drop(pending_requests);
+
+        // CHANGE 5: Same cleanup logic for both request types
+        let state_clone = state.clone();
+        let key_clone = current_key.clone();
+        let timeout_duration = state.timeout_duration;
+
+        tokio::spawn(async move {
+            tokio::time::sleep(timeout_duration).await;
+            if state_clone
                 .pending_requests
                 .write()
                 .await
-                .insert(request_id.clone(), pending);
+                .remove(&key_clone)
+                .is_some()
+            {
+                warn!("Request {} timed out and was removed", key_clone);
+            }
+        });
 
-            // Spawn a task to handle timeout
-            let state_clone = state.clone();
-            let request_id_clone = request_id.clone();
-            let timeout_duration = state.timeout_duration;
-            tokio::spawn(async move {
-                if let Err(_) = timeout(timeout_duration, rx).await {
-                    // Timeout occurred, remove the pending request
-                    state_clone
-                        .pending_requests
-                        .write()
-                        .await
-                        .remove(&request_id_clone);
-                    warn!("Request {} timed out", request_id_clone);
-                }
-            });
-
-            Ok((
-                StatusCode::OK,
+        // CHANGE 6: Same waiting logic for both request types
+        match timeout(timeout_duration, rx).await {
+            Ok(Ok(response)) => Ok((StatusCode::OK, Json(response))),
+            Ok(Err(_)) => Ok((
+                StatusCode::INTERNAL_SERVER_ERROR,
                 Json(LinkageResponse {
-                    status: "accepted".to_string(),
+                    status: "error".to_string(),
                     linkage_ids: None,
-                    message: Some("Server data received, waiting for client data".to_string()),
+                    message: Some("Internal error occurred".to_string()),
                 }),
-            ))
-        }
-        LinkageRequest::Client(client_req) => {
-            // Client role request - look for matching server request
-            let lookup_key = format!("{}:{}", destination_party, source_party);
-
-            let mut pending_requests = state.pending_requests.write().await;
-            if let Some(server_pending) = pending_requests.remove(&lookup_key) {
-                drop(pending_requests);
-
-                // We have a matching server request, perform linkage
-                match perform_linkage(
-                    &source_party_clone,
-                    &dest_party_clone,
-                    &client_req,
-                    &server_pending.data,
-                )
-                .await
-                {
-                    Ok(linkage_result) => {
-                        let linkage_ids: Vec<Option<String>> = linkage_result
-                            .0
-                            .iter()
-                            .map(|opt_id| opt_id.as_ref().map(|id| id.0.0.to_string()))
-                            .collect();
-
-                        let response = LinkageResponse {
-                            status: "completed".to_string(),
-                            linkage_ids: Some(linkage_ids.clone()),
-                            message: Some("Linkage computation completed".to_string()),
-                        };
-
-                        // Send response to the waiting server request
-                        let _ = server_pending.response_sender.send(response.clone());
-
-                        Ok((StatusCode::OK, Json(response)))
-                    }
-                    Err(e) => {
-                        let error_response = LinkageResponse {
-                            status: "error".to_string(),
-                            linkage_ids: None,
-                            message: Some(format!("Linkage computation failed: {}", e)),
-                        };
-
-                        let _ = server_pending.response_sender.send(error_response.clone());
-
-                        error!("Linkage computation failed: {}", e);
-                        Ok((StatusCode::INTERNAL_SERVER_ERROR, Json(error_response)))
-                    }
-                }
-            } else {
-                // No matching server request found - return 202 and wait
-                let request_id = format!("{}:{}", source_party, destination_party);
-                let (tx, rx) = oneshot::channel();
-
-                let pending = PendingRequest {
-                    source_party: source_party.clone(),
-                    destination_party: destination_party.clone(),
-                    data: LinkageRequest::Client(client_req),
-                    response_sender: tx,
-                };
-
-                pending_requests.insert(request_id.clone(), pending);
-                drop(pending_requests);
-
-                // Wait for matching server request with timeout
-                let timeout_duration = state.timeout_duration;
-                match timeout(timeout_duration, rx).await {
-                    Ok(Ok(response)) => Ok((StatusCode::OK, Json(response))),
-                    Ok(Err(_)) => {
-                        state.pending_requests.write().await.remove(&request_id);
-                        Ok((
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            Json(LinkageResponse {
-                                status: "error".to_string(),
-                                linkage_ids: None,
-                                message: Some("Internal error occurred".to_string()),
-                            }),
-                        ))
-                    }
-                    Err(_) => {
-                        // Timeout
-                        state.pending_requests.write().await.remove(&request_id);
-                        Ok((
-                            StatusCode::REQUEST_TIMEOUT,
-                            Json(LinkageResponse {
-                                status: "timeout".to_string(),
-                                linkage_ids: None,
-                                message: Some(
-                                    "No matching server request received within timeout"
-                                        .to_string(),
-                                ),
-                            }),
-                        ))
-                    }
-                }
+            )),
+            Err(_) => {
+                // Timeout occurred, remove if still present
+                state.pending_requests.write().await.remove(&current_key);
+                Ok((
+                    StatusCode::REQUEST_TIMEOUT,
+                    Json(LinkageResponse {
+                        status: "timeout".to_string(),
+                        linkage_ids: None,
+                        message: Some("No matching request received within timeout".to_string()),
+                    }),
+                ))
             }
         }
     }
