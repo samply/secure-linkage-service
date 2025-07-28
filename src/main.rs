@@ -1,4 +1,4 @@
-use secure_linkage_service::rest_api::start_server;
+use secure_linkage_service::server::start_server;
 use std::env;
 use tracing_subscriber::fmt::init;
 
