@@ -1,3 +1,4 @@
+pub mod health;
 pub mod linkage;
 pub mod party;
 pub mod state;

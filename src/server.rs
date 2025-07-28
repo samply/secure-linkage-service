@@ -1,10 +1,13 @@
 use axum::Router;
 use tracing::info;
 
-use crate::rest_api::{AppState, linkage::linkage_routes, party::party_routes};
+use crate::rest_api::{
+    AppState, health::health_routes, linkage::linkage_routes, party::party_routes,
+};
 
 fn create_router(state: AppState) -> Router {
     Router::new()
+        .merge(health_routes())
         .merge(linkage_routes())
         .merge(party_routes())
         .with_state(state)
