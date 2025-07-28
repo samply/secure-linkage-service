@@ -165,7 +165,7 @@ fn crypto_roundtrip_verification() {
 }
 
 #[test]
-fn matchbit_combinations_regression_test() {
+fn handle_all_matchbit_combinations() {
     let setup = TestSetup::new();
     let test_plaintext = b"matchbit_test_data";
     let encrypted_id =
