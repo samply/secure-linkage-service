@@ -4,7 +4,7 @@ use secure_linkage_service::{
         compute_random_linkage_ids,
         crypto::{generate_key, generate_random_key_material},
     },
-    domain::*,
+    domain::{HostName, LinkageParty},
 };
 
 #[test]

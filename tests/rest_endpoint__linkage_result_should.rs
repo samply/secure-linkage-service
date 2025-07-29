@@ -11,7 +11,10 @@ use secure_linkage_service::{
             generate_random_key_material,
         },
     },
-    domain::*,
+    domain::{
+        ClientLinkageData, ConfirmedMatchBit, HostName, IndexOfBestMatch, LinkageError,
+        LinkageParty, MatchBit, RecordId, ResultData, ServerLinkageData, TentativeMatchBit,
+    },
 };
 
 #[test]

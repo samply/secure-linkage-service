@@ -1,7 +1,10 @@
 pub mod crypto;
 pub mod linkage;
 use crate::core::linkage::{generate_computed_linkage_ids, generate_random_linkage_id};
-use crate::domain::*;
+use crate::domain::{
+    Base64EncodedString, ClientLinkageData, ConfirmedMatchBit, IndexOfBestMatch, LinkageError,
+    LinkageID, LinkageParty, LinkageResult, ResultData, ServerLinkageData, TentativeMatchBit,
+};
 use ring::rand::SystemRandom;
 
 /// Compute N random linkage IDs

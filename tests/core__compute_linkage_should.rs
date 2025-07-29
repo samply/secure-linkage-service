@@ -1,15 +1,16 @@
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use ring::rand::SystemRandom;
-use secure_linkage_service::{
-    core::{
-        compute_linkage,
-        crypto::{
-            decrypt_data_from_base64, encrypt_data_to_base64, generate_key,
-            generate_random_key_material,
-        },
+use secure_linkage_service::core::{
+    compute_linkage,
+    crypto::{
+        decrypt_data_from_base64, encrypt_data_to_base64, generate_key,
+        generate_random_key_material,
     },
-    domain::*,
+};
+use secure_linkage_service::domain::{
+    ClientLinkageData, ConfirmedMatchBit, HostName, IndexOfBestMatch, LinkageError, LinkageParty,
+    MatchBit, RecordId, ResultData, ServerLinkageData, TentativeMatchBit,
 };
 
 #[test]

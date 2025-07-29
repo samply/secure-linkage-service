@@ -4,7 +4,7 @@ use thiserror::Error;
 use tokio::sync::RwLock;
 
 use crate::core::compute_random_linkage_ids;
-use crate::domain::*;
+use crate::domain::{LinkageError, LinkageID, LinkageParty};
 
 #[derive(Debug, Error)]
 pub enum FreshIdsServiceError {

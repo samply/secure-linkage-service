@@ -1,13 +1,15 @@
 use ring::rand::SystemRandom;
 use secure_linkage_service::core::crypto::{generate_key, generate_random_key_material};
-use secure_linkage_service::domain::{HostName, LinkageParty};
-use secure_linkage_service::services::LinkageService;
-use secure_linkage_service::services::linkage_service::ClientLinkageRequest;
-use secure_linkage_service::services::linkage_service::LinkageRequest;
-use secure_linkage_service::services::linkage_service::LinkageRequestData;
-use secure_linkage_service::services::linkage_service::LinkageServiceError;
+use secure_linkage_service::{
+    domain::{HostName, LinkageParty},
+    services::{
+        LinkageService,
+        linkage_service::{
+            ClientLinkageRequest, LinkageRequest, LinkageRequestData, LinkageServiceError,
+        },
+    },
+};
 use tokio::time::Duration;
-
 #[tokio::test]
 async fn linkage_service_should_handle_timeout() {
     let linkage_service = LinkageService::with_timeout(Duration::from_millis(100));
