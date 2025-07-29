@@ -6,11 +6,11 @@ use axum::{
 use serde_json::Value;
 use tower::ServiceExt;
 
-use secure_linkage_service::rest_api::{AppState, fresh_ids::fresh_ids_routes};
+use secure_linkage_service::rest_api::{AppState, fresh_record_ids::fresh_record_ids_routes};
 
 fn create_test_app() -> Router {
     let state = AppState::new();
-    fresh_ids_routes().with_state(state)
+    fresh_record_ids_routes().with_state(state)
 }
 
 #[tokio::test]
@@ -19,7 +19,7 @@ async fn should_generate_single_fresh_id_when_no_count_specified() {
 
     let request = Request::builder()
         .method("POST")
-        .uri("/freshIDs/test_client")
+        .uri("/freshRecordIDs/test_client")
         .header("content-type", "application/json")
         .body(Body::empty())
         .unwrap();
@@ -36,8 +36,8 @@ async fn should_generate_single_fresh_id_when_no_count_specified() {
     assert_eq!(json["status"], "success");
     assert_eq!(json["party"], "test_client");
     assert_eq!(json["count"], 1);
-    assert_eq!(json["fresh_ids"].as_array().unwrap().len(), 1);
-    assert!(json["fresh_ids"][0].as_str().unwrap().len() > 0);
+    assert_eq!(json["fresh_record_ids"].as_array().unwrap().len(), 1);
+    assert!(json["fresh_record_ids"][0].as_str().unwrap().len() > 0);
 }
 
 #[tokio::test]
@@ -46,7 +46,7 @@ async fn should_generate_multiple_fresh_ids_when_count_specified() {
 
     let request = Request::builder()
         .method("POST")
-        .uri("/freshIDs/test_server?n=5")
+        .uri("/freshRecordIDs/test_server?n=5")
         .header("content-type", "application/json")
         .body(Body::empty())
         .unwrap();
@@ -63,10 +63,10 @@ async fn should_generate_multiple_fresh_ids_when_count_specified() {
     assert_eq!(json["status"], "success");
     assert_eq!(json["party"], "test_server");
     assert_eq!(json["count"], 5);
-    assert_eq!(json["fresh_ids"].as_array().unwrap().len(), 5);
+    assert_eq!(json["fresh_record_ids"].as_array().unwrap().len(), 5);
 
     // Verify all IDs are unique and non-empty
-    let ids: Vec<&str> = json["fresh_ids"]
+    let ids: Vec<&str> = json["fresh_record_ids"]
         .as_array()
         .unwrap()
         .iter()
@@ -90,7 +90,7 @@ async fn should_return_bad_request_for_zero_count() {
 
     let request = Request::builder()
         .method("POST")
-        .uri("/freshIDs/test_client?n=0")
+        .uri("/freshRecordIDs/test_client?n=0")
         .header("content-type", "application/json")
         .body(Body::empty())
         .unwrap();
@@ -106,7 +106,7 @@ async fn should_return_bad_request_for_zero_count() {
 
     assert_eq!(json["status"], "error");
     assert_eq!(json["count"], 0);
-    assert_eq!(json["fresh_ids"].as_array().unwrap().len(), 0);
+    assert_eq!(json["fresh_record_ids"].as_array().unwrap().len(), 0);
     assert!(json["message"].as_str().unwrap().contains("greater than 0"));
 }
 
@@ -116,7 +116,7 @@ async fn should_return_bad_request_for_excessive_count() {
 
     let request = Request::builder()
         .method("POST")
-        .uri("/freshIDs/test_client?n=1001")
+        .uri("/freshRecordIDs/test_client?n=1001")
         .header("content-type", "application/json")
         .body(Body::empty())
         .unwrap();
@@ -132,7 +132,7 @@ async fn should_return_bad_request_for_excessive_count() {
 
     assert_eq!(json["status"], "error");
     assert_eq!(json["count"], 1001);
-    assert_eq!(json["fresh_ids"].as_array().unwrap().len(), 0);
+    assert_eq!(json["fresh_record_ids"].as_array().unwrap().len(), 0);
     assert!(json["message"].as_str().unwrap().contains("exceed 1000"));
 }
 
@@ -142,7 +142,7 @@ async fn should_return_not_found_for_unknown_party() {
 
     let request = Request::builder()
         .method("POST")
-        .uri("/freshIDs/unknown_party?n=1")
+        .uri("/freshRecordIDs/unknown_party?n=1")
         .header("content-type", "application/json")
         .body(Body::empty())
         .unwrap();
@@ -158,7 +158,7 @@ async fn should_return_not_found_for_unknown_party() {
 
     assert_eq!(json["status"], "error");
     assert_eq!(json["party"], "unknown_party");
-    assert_eq!(json["fresh_ids"].as_array().unwrap().len(), 0);
+    assert_eq!(json["fresh_record_ids"].as_array().unwrap().len(), 0);
     assert!(json["message"].as_str().unwrap().contains("not found"));
 }
 
@@ -170,7 +170,7 @@ async fn should_generate_fresh_ids_for_all_default_parties() {
     for party in test_parties {
         let request = Request::builder()
             .method("POST")
-            .uri(&format!("/freshIDs/{}?n=3", party))
+            .uri(&format!("/freshRecordIDs/{}?n=3", party))
             .header("content-type", "application/json")
             .body(Body::empty())
             .unwrap();
@@ -187,7 +187,7 @@ async fn should_generate_fresh_ids_for_all_default_parties() {
         assert_eq!(json["status"], "success");
         assert_eq!(json["party"], party);
         assert_eq!(json["count"], 3);
-        assert_eq!(json["fresh_ids"].as_array().unwrap().len(), 3);
+        assert_eq!(json["fresh_record_ids"].as_array().unwrap().len(), 3);
     }
 }
 
@@ -197,7 +197,7 @@ async fn should_handle_large_valid_count() {
 
     let request = Request::builder()
         .method("POST")
-        .uri("/freshIDs/test_client?n=100")
+        .uri("/freshRecordIDs/test_client?n=100")
         .header("content-type", "application/json")
         .body(Body::empty())
         .unwrap();
@@ -213,10 +213,10 @@ async fn should_handle_large_valid_count() {
 
     assert_eq!(json["status"], "success");
     assert_eq!(json["count"], 100);
-    assert_eq!(json["fresh_ids"].as_array().unwrap().len(), 100);
+    assert_eq!(json["fresh_record_ids"].as_array().unwrap().len(), 100);
 
     // Verify all generated IDs are unique
-    let ids: Vec<&str> = json["fresh_ids"]
+    let ids: Vec<&str> = json["fresh_record_ids"]
         .as_array()
         .unwrap()
         .iter()
@@ -235,7 +235,7 @@ async fn should_return_consistent_response_format() {
 
     let request = Request::builder()
         .method("POST")
-        .uri("/freshIDs/test_client?n=2")
+        .uri("/freshRecordIDs/test_client?n=2")
         .header("content-type", "application/json")
         .body(Body::empty())
         .unwrap();
@@ -253,13 +253,13 @@ async fn should_return_consistent_response_format() {
     assert!(json.get("status").is_some());
     assert!(json.get("party").is_some());
     assert!(json.get("count").is_some());
-    assert!(json.get("fresh_ids").is_some());
+    assert!(json.get("fresh_record_ids").is_some());
     assert!(json.get("message").is_some());
 
     // Verify field types
     assert!(json["status"].is_string());
     assert!(json["party"].is_string());
     assert!(json["count"].is_number());
-    assert!(json["fresh_ids"].is_array());
+    assert!(json["fresh_record_ids"].is_array());
     assert!(json["message"].is_null() || json["message"].is_string());
 }

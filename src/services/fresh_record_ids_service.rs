@@ -7,7 +7,7 @@ use crate::core::compute_random_linkage_ids;
 use crate::domain::{LinkageError, LinkageID, LinkageParty};
 
 #[derive(Debug, Error)]
-pub enum FreshIdsServiceError {
+pub enum FreshRecordIdsServiceError {
     #[error("Party not found: {0}")]
     PartyNotFound(String),
     #[error("Invalid count: {0}")]
@@ -19,12 +19,12 @@ pub enum FreshIdsServiceError {
 }
 
 #[derive(Debug, Clone)]
-pub struct FreshIdsService {
+pub struct FreshRecordIdsService {
     // Future: Could store generation statistics, rate limiting, etc.
     _internal_state: Arc<RwLock<HashMap<String, u64>>>,
 }
 
-impl FreshIdsService {
+impl FreshRecordIdsService {
     pub fn new() -> Self {
         Self {
             _internal_state: Arc::new(RwLock::new(HashMap::new())),
@@ -35,23 +35,23 @@ impl FreshIdsService {
         &self,
         party: &LinkageParty,
         count: u32,
-    ) -> Result<Vec<LinkageID>, FreshIdsServiceError> {
+    ) -> Result<Vec<LinkageID>, FreshRecordIdsServiceError> {
         // Validate count
         if count == 0 {
-            return Err(FreshIdsServiceError::InvalidCount(
+            return Err(FreshRecordIdsServiceError::InvalidCount(
                 "Count must be greater than 0".to_string(),
             ));
         }
 
         if count > 1000 {
-            return Err(FreshIdsServiceError::InvalidCount(
+            return Err(FreshRecordIdsServiceError::InvalidCount(
                 "Count must not exceed 1000".to_string(),
             ));
         }
 
         // Call the core layer to generate fresh IDs
         let fresh_ids = compute_random_linkage_ids(party, count.try_into().unwrap())
-            .map_err(FreshIdsServiceError::GenerationFailed)?;
+            .map_err(FreshRecordIdsServiceError::GenerationFailed)?;
 
         // Future: Could add logging, metrics, caching, etc. here
         self.update_generation_stats(&party.hostname.0, count as u64)
@@ -72,7 +72,7 @@ impl FreshIdsService {
     }
 }
 
-impl Default for FreshIdsService {
+impl Default for FreshRecordIdsService {
     fn default() -> Self {
         Self::new()
     }

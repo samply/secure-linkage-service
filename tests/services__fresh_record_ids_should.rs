@@ -1,11 +1,13 @@
 use ring::rand::SystemRandom;
 use secure_linkage_service::core::crypto::{generate_key, generate_random_key_material};
 use secure_linkage_service::domain::{HostName, LinkageParty};
-use secure_linkage_service::services::fresh_ids_service::{FreshIdsService, FreshIdsServiceError};
+use secure_linkage_service::services::fresh_record_ids_service::{
+    FreshRecordIdsService, FreshRecordIdsServiceError,
+};
 
 #[tokio::test]
 async fn fresh_ids_service_should_generate_single_id() {
-    let service = FreshIdsService::new();
+    let service = FreshRecordIdsService::new();
 
     let rand = SystemRandom::new();
     let key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
@@ -21,7 +23,7 @@ async fn fresh_ids_service_should_generate_single_id() {
 
 #[tokio::test]
 async fn fresh_ids_service_should_generate_multiple_ids() {
-    let service = FreshIdsService::new();
+    let service = FreshRecordIdsService::new();
 
     let rand = SystemRandom::new();
     let key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
@@ -43,7 +45,7 @@ async fn fresh_ids_service_should_generate_multiple_ids() {
 
 #[tokio::test]
 async fn fresh_ids_service_should_reject_zero_count() {
-    let service = FreshIdsService::new();
+    let service = FreshRecordIdsService::new();
 
     let rand = SystemRandom::new();
     let key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
@@ -54,13 +56,13 @@ async fn fresh_ids_service_should_reject_zero_count() {
     assert!(result.is_err());
     assert!(matches!(
         result.unwrap_err(),
-        FreshIdsServiceError::InvalidCount(_)
+        FreshRecordIdsServiceError::InvalidCount(_)
     ));
 }
 
 #[tokio::test]
 async fn fresh_ids_service_should_reject_excessive_count() {
-    let service = FreshIdsService::new();
+    let service = FreshRecordIdsService::new();
 
     let rand = SystemRandom::new();
     let key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
@@ -71,13 +73,13 @@ async fn fresh_ids_service_should_reject_excessive_count() {
     assert!(result.is_err());
     assert!(matches!(
         result.unwrap_err(),
-        FreshIdsServiceError::InvalidCount(_)
+        FreshRecordIdsServiceError::InvalidCount(_)
     ));
 }
 
 #[tokio::test]
 async fn fresh_ids_service_should_track_generation_stats() {
-    let service = FreshIdsService::new();
+    let service = FreshRecordIdsService::new();
 
     let rand = SystemRandom::new();
     let key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
@@ -97,7 +99,7 @@ async fn fresh_ids_service_should_track_generation_stats() {
 
 #[tokio::test]
 async fn fresh_ids_service_should_handle_maximum_valid_count() {
-    let service = FreshIdsService::new();
+    let service = FreshRecordIdsService::new();
 
     let rand = SystemRandom::new();
     let key = generate_key(generate_random_key_material(&rand).unwrap()).unwrap();
