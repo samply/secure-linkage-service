@@ -438,7 +438,10 @@ if ! discovered_tests=$(discover_tests); then
     exit 1
 fi
 
-mapfile -t test_files <<< "$discovered_tests"
+test_files=()
+while IFS= read -r test_file; do
+    test_files+=("$test_file")
+done <<< "$discovered_tests"
 verbose_log "Processing ${#test_files[@]} discovered test files"
 
 # Process each discovered test

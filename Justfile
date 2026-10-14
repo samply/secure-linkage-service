@@ -129,7 +129,7 @@ e2e:
       echo "Using existing server at http://${host}:${port}"
     fi
 
-    bash tests/e2e/run-all-tests.sh
+    bash tests/e2e/run-all-tests.sh --no-server
 
 logs:
     tail -f {{ logfile }}
