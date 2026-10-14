@@ -1,0 +1,13 @@
+# Parties known to the central Linkage Service.
+#
+# `name` is the global MainSEL/Mainzelliste ID used in URLs such as
+# /freshIDs/<name>, /testConnection/<name>, and /linkageResult/<local>/<remote>.
+# `hostname` is the identity stored in the Linkage Service's party model.
+
+[[parties]]
+name = "SiteA"
+hostname = "SiteA"
+
+[[parties]]
+name = "SiteB"
+hostname = "SiteB"

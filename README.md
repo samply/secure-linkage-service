@@ -46,7 +46,7 @@ The service exposes HTTP endpoints for health checks, fresh encrypted record IDs
 
 ### Prerequisites
 
-- Rust 1.85.1 or newer
+- Rust 1.89 or newer
 - Git
 - [just](https://github.com/casey/just)
 
@@ -63,6 +63,12 @@ cargo test
 
 ```bash
 just start
+```
+
+`just start` uses `linkage-parties.toml`. Pass an empty config argument to use the built-in test parties:
+
+```bash
+just start ""
 ```
 
 Stop it with:
@@ -315,10 +321,11 @@ Production deployments should add TLS termination, request limits, log collectio
 Environment variables:
 
 ```bash
-HOST=127.0.0.1     # bind address
-PORT=5000          # server port
-RUST_LOG=info      # tracing level
-RUST_BACKTRACE=1   # backtraces during development
+HOST=127.0.0.1                              # bind address
+PORT=5000                                   # server port
+PARTIES_CONFIG_FILE=./linkage-parties.toml  # known linkage parties
+RUST_LOG=info                               # tracing level
+RUST_BACKTRACE=1                            # backtraces during development
 ```
 
 ## Development

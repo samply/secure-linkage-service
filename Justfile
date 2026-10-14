@@ -5,6 +5,8 @@ host := "localhost"
 port := "5000"
 pidfile := ".server.pid"
 logfile := "server.log"
+config_file := "linkage-parties.toml"
+rust_image := "rust:1.89-bookworm"
 
 _default:
     @just --list
@@ -12,7 +14,7 @@ _default:
 build:
     cargo build --release
 
-start:
+start config=config_file:
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -21,6 +23,7 @@ start:
     port="{{ port }}"
     pidfile="{{ pidfile }}"
     logfile="{{ logfile }}"
+    config="{{ config }}"
 
     if curl -fsS --max-time 1 "http://${host}:${port}/health" >/dev/null 2>&1; then
       echo "Server is already responding at http://${host}:${port}"
@@ -38,6 +41,15 @@ start:
     fi
 
     cargo build --release
+
+    if [[ -n "$config" ]]; then
+      if [[ ! -f "$config" ]]; then
+        echo "Parties config file not found: $config" >&2
+        exit 1
+      fi
+      export PARTIES_CONFIG_FILE="$PWD/$config"
+      echo "Using parties config: $PARTIES_CONFIG_FILE"
+    fi
 
     "target/release/${binary}" > "$logfile" 2>&1 &
     pid="$!"
@@ -123,7 +135,7 @@ e2e:
     trap cleanup EXIT
 
     if ! curl -fsS --max-time 1 "http://${host}:${port}/health" >/dev/null 2>&1; then
-      just start
+      just start ""
       started=1
     else
       echo "Using existing server at http://${host}:${port}"
@@ -141,11 +153,18 @@ image-local tag="secure-linkage-service:local":
       *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
     esac
 
-    cargo build --release
-
     rm -rf artifacts
     mkdir -p "artifacts/binaries-${arch}-"
-    cp "target/release/{{ binary }}" "artifacts/binaries-${arch}-/{{ binary }}"
+
+    docker run --rm \
+      --platform "$platform" \
+      -e ARCH="$arch" \
+      -e CARGO_TARGET_DIR=/tmp/target-linux \
+      -e PATH=/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+      -v "$PWD:/work" \
+      -w /work \
+      "{{ rust_image }}" \
+      bash -lc 'cargo build --release --locked && cp "$CARGO_TARGET_DIR/release/{{ binary }}" "artifacts/binaries-${ARCH}-/{{ binary }}"'
 
     docker buildx build \
       --platform "$platform" \

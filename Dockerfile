@@ -11,5 +11,7 @@ RUN chmod +x /app/*
 FROM gcr.io/distroless/cc-debian12
 ARG COMPONENT
 ENV HOST=0.0.0.0
+ENV PARTIES_CONFIG_FILE=/etc/secure-linkage-service/linkage-parties.toml
+COPY linkage-parties.toml /etc/secure-linkage-service/linkage-parties.toml
 COPY --from=chmodder /app/$COMPONENT /usr/local/bin/secure-linkage-service
 ENTRYPOINT ["/usr/local/bin/secure-linkage-service"]
