@@ -131,6 +131,31 @@ e2e:
 
     bash tests/e2e/run-all-tests.sh --no-server
 
+image-local tag="secure-linkage-service:local":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    case "$(uname -m)" in
+      x86_64) arch="amd64"; platform="linux/amd64" ;;
+      arm64|aarch64) arch="arm64"; platform="linux/arm64/v8" ;;
+      *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+    esac
+
+    cargo build --release
+
+    rm -rf artifacts
+    mkdir -p "artifacts/binaries-${arch}-"
+    cp "target/release/{{ binary }}" "artifacts/binaries-${arch}-/{{ binary }}"
+
+    docker buildx build \
+      --platform "$platform" \
+      --build-arg TARGETARCH="$arch" \
+      --build-arg FEATURE="-" \
+      --build-arg COMPONENT="{{ binary }}" \
+      -t "{{ tag }}" \
+      --load \
+      .
+
 logs:
     tail -f {{ logfile }}
 
