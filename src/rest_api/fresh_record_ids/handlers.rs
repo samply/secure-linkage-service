@@ -4,6 +4,7 @@ use axum::{
     response::Json,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use tracing::{error, info};
 
 use crate::rest_api::AppState;
@@ -12,6 +13,7 @@ use crate::services::fresh_record_ids_service::FreshRecordIdsServiceError;
 #[derive(Debug, Deserialize)]
 pub struct FreshRecordIdsQuery {
     pub n: Option<u32>,
+    pub count: Option<u32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -28,7 +30,7 @@ pub async fn generate_fresh_record_ids(
     Query(query): Query<FreshRecordIdsQuery>,
     State(state): State<AppState>,
 ) -> Result<Json<FreshRecordIdsResponse>, (StatusCode, Json<FreshRecordIdsResponse>)> {
-    let count = query.n.unwrap_or(1);
+    let count = query.n.or(query.count).unwrap_or(1);
 
     info!("Generating {} fresh IDs for party: {}", count, party);
 
@@ -84,6 +86,22 @@ pub async fn generate_fresh_record_ids(
                 }),
             ))
         }
+    }
+}
+
+pub async fn generate_legacy_fresh_ids(
+    Path(party): Path<String>,
+    Query(query): Query<FreshRecordIdsQuery>,
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    match generate_fresh_record_ids(Path(party.clone()), Query(query), State(state)).await {
+        Ok(Json(response)) => Ok(Json(json!({ "linkageIds": response.fresh_record_ids }))),
+        Err((status, Json(response))) => Err((
+            status,
+            Json(json!({
+                "error": response.message.unwrap_or_else(|| "fresh ID generation failed".to_string())
+            })),
+        )),
     }
 }
 

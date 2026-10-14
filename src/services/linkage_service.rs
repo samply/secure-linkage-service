@@ -44,7 +44,15 @@ pub enum LinkageRequest {
 pub struct LinkageResponse {
     pub status: String,
     pub linkage_ids: Option<Vec<Option<String>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result: Option<Vec<LinkageIdResult>>,
     pub message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LinkageIdResult {
+    #[serde(rename = "linkageId")]
+    pub linkage_id: Option<String>,
 }
 
 #[derive(Debug)]
@@ -119,9 +127,16 @@ impl LinkageService {
                         .map(|opt_id| opt_id.as_ref().map(|id| id.0.0.to_string()))
                         .collect();
 
+                    let result = linkage_ids
+                        .iter()
+                        .cloned()
+                        .map(|linkage_id| LinkageIdResult { linkage_id })
+                        .collect();
+
                     let response = LinkageResponse {
                         status: "completed".to_string(),
                         linkage_ids: Some(linkage_ids),
+                        result: Some(result),
                         message: Some("Linkage computation completed".to_string()),
                     };
 
@@ -133,6 +148,7 @@ impl LinkageService {
                     let error_response = LinkageResponse {
                         status: "error".to_string(),
                         linkage_ids: None,
+                        result: None,
                         message: Some(format!("Linkage computation failed: {}", e)),
                     };
 

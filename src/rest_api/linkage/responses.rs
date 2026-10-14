@@ -12,6 +12,7 @@ pub fn map_linkage_service_error(err: LinkageServiceError) -> (StatusCode, Linka
             LinkageResponse {
                 status: "error".to_string(),
                 linkage_ids: None,
+                result: None,
                 message: Some(format!("Invalid request pairing: {}", msg)),
             },
         ),
@@ -20,6 +21,7 @@ pub fn map_linkage_service_error(err: LinkageServiceError) -> (StatusCode, Linka
             LinkageResponse {
                 status: "error".to_string(),
                 linkage_ids: None,
+                result: None,
                 message: Some(format!("Linkage computation failed: {}", e)),
             },
         ),
@@ -28,6 +30,7 @@ pub fn map_linkage_service_error(err: LinkageServiceError) -> (StatusCode, Linka
             LinkageResponse {
                 status: "error".to_string(),
                 linkage_ids: None,
+                result: None,
                 message: Some(format!("Internal error: {}", msg)),
             },
         ),
@@ -36,6 +39,7 @@ pub fn map_linkage_service_error(err: LinkageServiceError) -> (StatusCode, Linka
             LinkageResponse {
                 status: "timeout".to_string(),
                 linkage_ids: None,
+                result: None,
                 message: Some("No matching request received within timeout".to_string()),
             },
         ),
