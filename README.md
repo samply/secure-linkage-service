@@ -315,6 +315,7 @@ Production deployments should add TLS termination, request limits, log collectio
 Environment variables:
 
 ```bash
+HOST=127.0.0.1     # bind address
 PORT=5000          # server port
 RUST_LOG=info      # tracing level
 RUST_BACKTRACE=1   # backtraces during development
