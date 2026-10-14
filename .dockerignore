@@ -1,0 +1,15 @@
+.git
+.github
+.dockerignore
+.gitignore
+
+/target
+/venv
+
+*.log
+.server.pid
+
+# The Samply Docker workflow downloads build artifacts here before docker build.
+# Keep this directory in the build context.
+!/artifacts
+!/artifacts/**
