@@ -5,17 +5,73 @@ on:
   workflow_dispatch:
   pull_request:
 
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
 jobs:
-  build-with-samply:
-    uses: samply/github-workflows/.github/workflows/rust.yml@main
+  pre-check:
+    name: Security and license check
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  build:
+    name: Build (${{ matrix.arch }})
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    uses: samply/github-workflows/.github/workflows/rust-inner.yml@main
     with:
-      # See https://github.com/samply/github-workflows/tree/main/.github/workflows/rust.yml
-      # Docker Hub name will be {image-prefix}{component}.
-      image-prefix: "samply/"
-      components: '[ "secure-linkage-service" ]'
-      architectures: '[ "amd64", "arm64" ]'
-      ghcr-retention-policy: "keep"
-      cargo-fmt-check: true
+      architecture: ${{ matrix.arch }}
+      features: ""
+      profile: release
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download test binaries
+        uses: actions/download-artifact@v6
+        with:
+          name: testbinaries-amd64-
+          path: testbinaries
+      - name: Run tests
+        run: |
+          for testbin in testbinaries/*; do
+            chmod +x "$testbin"
+            "$testbin"
+          done
+
+  cargo-fmt-check:
+    name: Cargo fmt check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  docker:
+    name: Docker
+    needs: [build, pre-check, test, cargo-fmt-check]
+    uses: samply/github-workflows/.github/workflows/docker-ci.yml@main
+    with:
+      image-name: samply/secure-linkage-service
+      build-file: ./Dockerfile
+      build-args: |
+        FEATURE=-
+        COMPONENT=secure-linkage-service
+      build-platforms-short: '[ "amd64", "arm64" ]'
+      artifact-name: "*"
+      binary-name: secure-linkage-service
+      push-to: auto
+      ghcr-retention-policy: keep
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
